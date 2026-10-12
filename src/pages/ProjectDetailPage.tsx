@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useReveal } from '../components/motion/useReveal'
 import { getProject } from '../data/projects'
 import { useDocumentTitle } from '../app/useDocumentTitle'
 import { NotFoundPage } from './NotFoundPage'
@@ -6,17 +8,19 @@ import { NotFoundPage } from './NotFoundPage'
 export function ProjectDetailPage() {
   const { slug } = useParams()
   const project = getProject(slug)
+  const articleRef = useRef<HTMLElement>(null)
+  useReveal(articleRef, { selector: '[data-motion]', duration: 350, step: 60, deps: [slug] })
   useDocumentTitle(project?.title ?? 'Not found')
   if (!project) return <NotFoundPage />
 
   return (
-    <article className="container page">
+    <article className="container page" ref={articleRef}>
       <Link className="back" to="/projects">
         ← All projects
       </Link>
       <h1>{project.title}</h1>
       <p className="lead">{project.summary}</p>
-      <dl className="meta">
+      <dl className="meta" data-motion>
         <div>
           <dt>Status</dt>
           <dd>{project.status}</dd>
@@ -40,13 +44,13 @@ export function ProjectDetailPage() {
           </div>
         )}
       </dl>
-      <ul className="tags" aria-label="Technologies">
+      <ul className="tags" aria-label="Technologies" data-motion>
         {project.stack.map((s) => (
           <li key={s}>{s}</li>
         ))}
       </ul>
       {project.sections.map((s, i) => (
-        <section key={s.heading} className="case-section" aria-labelledby={`s${i}`}>
+        <section key={s.heading} className="case-section" data-motion aria-labelledby={`s${i}`}>
           <span className="num">{String(i + 1).padStart(2, '0')}</span>
           <h2 id={`s${i}`}>{s.heading}</h2>
           {s.body.map((para) => (

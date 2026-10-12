@@ -3,7 +3,7 @@ import type { Project } from '../data/projects'
 
 export function ProjectCard({ project }: { project: Project }) {
   return (
-    <article className="card">
+    <article className="card" data-motion>
       <span className="badge">Status: {project.status}</span>
       <h3>
         <Link to={`/projects/${project.slug}`}>{project.title}</Link>

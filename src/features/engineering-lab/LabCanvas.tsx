@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { DURATION } from '../../components/motion/motion'
+import { useReveal } from '../../components/motion/useReveal'
 import type { Lab, LabProject } from './scene/createLab'
 
 type Props = {
@@ -8,7 +10,7 @@ type Props = {
   reducedMotion: boolean
   onSelect: (id: string) => void
   onHover: (id: string | null) => void
-  onUnavailable: () => void
+  onUnavailable: (reason: 'context-lost' | 'load-failed') => void
 }
 
 /** Thin React wrapper: mounts the Three.js scene once and syncs state into it. */
@@ -17,6 +19,7 @@ export default function LabCanvas(props: Props) {
   const labRef = useRef<Lab | null>(null)
   const latest = useRef(props)
   latest.current = props
+  useReveal(canvasRef, { duration: DURATION.canvas, y: 0 })
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -32,14 +35,14 @@ export default function LabCanvas(props: Props) {
           maxPixelRatio: window.innerWidth < 640 ? 1.5 : 2,
           onSelect: (id) => latest.current.onSelect(id),
           onHover: (id) => latest.current.onHover(id),
-          onContextLost: () => latest.current.onUnavailable(),
+          onContextLost: () => latest.current.onUnavailable('context-lost'),
         })
         lab.setSelected(latest.current.selectedId)
         lab.setHighlighted(latest.current.highlightedId)
         labRef.current = lab
       })
       .catch(() => {
-        if (!cancelled) latest.current.onUnavailable()
+        if (!cancelled) latest.current.onUnavailable('load-failed')
       })
     return () => {
       cancelled = true

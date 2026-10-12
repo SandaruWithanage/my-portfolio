@@ -1,8 +1,11 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { DURATION } from '../../components/motion/motion'
+import { usePrefersReducedMotion } from '../../components/motion/usePrefersReducedMotion'
+import { useReveal } from '../../components/motion/useReveal'
 import { projects } from '../../data/projects'
 import { LabFallback } from './fallback/LabFallback'
-import { isWebGLAvailable, useInViewOnce, usePrefersReducedMotion } from './support'
+import { isWebGLAvailable, useInViewOnce } from './support'
 
 const LabCanvas = lazy(() => import('./LabCanvas'))
 
@@ -14,18 +17,31 @@ export function LabSection() {
   const reducedMotion = usePrefersReducedMotion()
   const [webgl] = useState(isWebGLAvailable)
   const [force2d, setForce2d] = useState(false)
-  const [lost, setLost] = useState(false)
+  const [failure, setFailure] = useState<'context-lost' | 'load-failed' | null>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
 
   const selected = projects.find((p) => p.slug === selectedId)
-  const show3d = webgl && !force2d && !lost
+  const show3d = webgl && !force2d && !failure
   const fallbackReason = !webgl
     ? 'WebGL is not available in this browser, so the 3D lab is replaced with this 2D view.'
-    : lost
+    : failure === 'context-lost'
       ? 'The graphics context was lost, so the 3D lab was switched off.'
-      : 'You chose the 2D view.'
+      : failure === 'load-failed'
+        ? 'The 3D lab failed to load, so this 2D view is shown instead.'
+        : 'You chose the 2D view.'
+
+  // Panel content transitions in on every selection change; a new change reverts the
+  // previous run first, so rapid toggling always settles on fully visible content.
+  useReveal(panelRef, {
+    selector: '[data-motion]',
+    duration: DURATION.panel,
+    step: 50,
+    y: 8,
+    deps: [selectedId],
+  })
 
   return (
     <section className="section lab" aria-labelledby="lab-title">
@@ -34,7 +50,7 @@ export function LabSection() {
           <p className="eyebrow">Engineering lab</p>
           <h2 id="lab-title">Explore the systems I build</h2>
         </div>
-        {webgl && !lost && (
+        {webgl && !failure && (
           <button type="button" className="btn" onClick={() => setForce2d((v) => !v)}>
             {force2d ? 'Switch to 3D view' : 'Switch to 2D view'}
           </button>
@@ -44,7 +60,7 @@ export function LabSection() {
       <div className="lab-stage" ref={setStage}>
         {show3d ? (
           inView && (
-            <Suspense fallback={<p className="lab-loading">Loading 3D lab…</p>}>
+            <Suspense fallback={<p className="lab-loading" role="status">Loading 3D lab…</p>}>
               <LabCanvas
                 projects={labProjects}
                 selectedId={selectedId}
@@ -52,7 +68,7 @@ export function LabSection() {
                 reducedMotion={reducedMotion}
                 onSelect={setSelectedId}
                 onHover={setHoveredId}
-                onUnavailable={() => setLost(true)}
+                onUnavailable={setFailure}
               />
             </Suspense>
           )
@@ -85,22 +101,22 @@ export function LabSection() {
         ))}
       </ul>
 
-      <div className="lab-panel" aria-live="polite">
+      <div className="lab-panel" aria-live="polite" ref={panelRef}>
         {selected ? (
           <>
-            <p className="badge">Selected · {selected.status}</p>
-            <h3>{selected.title}</h3>
-            <ul>
+            <p className="badge" data-motion>Selected · {selected.status}</p>
+            <h3 data-motion>{selected.title}</h3>
+            <ul data-motion>
               {selected.highlights.map((h) => (
                 <li key={h}>{h}</li>
               ))}
             </ul>
-            <Link className="btn btn-primary" to={`/projects/${selected.slug}`}>
+            <Link data-motion className="btn btn-primary" to={`/projects/${selected.slug}`}>
               Read the {selected.title} case study
             </Link>
           </>
         ) : (
-          <p className="muted">Select a module to see its engineering summary.</p>
+          <p className="muted" data-motion>Select a module to see its engineering summary.</p>
         )}
       </div>
     </section>

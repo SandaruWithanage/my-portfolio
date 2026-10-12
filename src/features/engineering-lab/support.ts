@@ -12,22 +12,6 @@ export function isWebGLAvailable(): boolean {
   }
 }
 
-export function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(() =>
-    typeof matchMedia === 'function'
-      ? matchMedia('(prefers-reduced-motion: reduce)').matches
-      : false,
-  )
-  useEffect(() => {
-    if (typeof matchMedia !== 'function') return
-    const mq = matchMedia('(prefers-reduced-motion: reduce)')
-    const onChange = () => setReduced(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-  return reduced
-}
-
 /** True once the element has entered the viewport (or immediately without IntersectionObserver). */
 export function useInViewOnce(el: Element | null): boolean {
   const [seen, setSeen] = useState(typeof IntersectionObserver === 'undefined')
