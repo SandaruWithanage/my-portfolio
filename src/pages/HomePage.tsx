@@ -3,6 +3,7 @@ import { ProjectCard } from '../components/ProjectCard'
 import { projects } from '../data/projects'
 import { profile } from '../data/profile'
 import { useDocumentTitle } from '../app/useDocumentTitle'
+import { LabSection } from '../features/engineering-lab/LabSection'
 
 export function HomePage() {
   useDocumentTitle()
@@ -21,6 +22,7 @@ export function HomePage() {
           </Link>
         </div>
       </section>
+      <LabSection />
       <section className="section" aria-labelledby="featured">
         <h2 id="featured">Featured projects</h2>
         <div className="grid">
