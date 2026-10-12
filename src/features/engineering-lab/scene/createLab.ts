@@ -195,6 +195,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
     if (!w || !h) return
     renderer.setSize(w, h, false)
     camera.aspect = w / h
+    rig.setAspect(w / h)
     camera.updateProjectionMatrix()
     requestFrame()
   }

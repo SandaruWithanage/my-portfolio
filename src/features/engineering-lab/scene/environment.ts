@@ -33,7 +33,7 @@ export function buildEnvironment(scene: THREE.Scene, quality: Quality) {
   const track = <T extends { dispose: () => void }>(o: T): T => (disposables.push(o), o)
   const high = quality === 'high'
 
-  scene.fog = high ? new THREE.Fog(OBSIDIAN, 14, 42) : new THREE.Fog(OBSIDIAN, 12, 32)
+  scene.fog = high ? new THREE.Fog(OBSIDIAN, 14, 42) : new THREE.Fog(OBSIDIAN, 26, 60)
 
   const dark = track(new THREE.MeshStandardMaterial({ color: 0x0f141b, roughness: 0.6, metalness: 0.5 }))
   const wallMat = track(new THREE.MeshStandardMaterial({ color: 0x0c1218, roughness: 0.9, metalness: 0.2 }))
@@ -140,8 +140,8 @@ export function buildEnvironment(scene: THREE.Scene, quality: Quality) {
     lights.push(cyanLight, amberLight)
   }
 
-  const hemi = new THREE.HemisphereLight(0x9fb4c8, OBSIDIAN, high ? 0.55 : 0.8)
-  const key = new THREE.DirectionalLight(0xffffff, high ? 0.7 : 1)
+  const hemi = new THREE.HemisphereLight(0x9fb4c8, OBSIDIAN, high ? 0.55 : 1.2)
+  const key = new THREE.DirectionalLight(0xffffff, high ? 0.7 : 1.5)
   key.position.set(4, 8, 8)
   lights.push(hemi, key)
 

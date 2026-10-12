@@ -13,6 +13,8 @@ export function createCameraRig(camera: THREE.PerspectiveCamera, reducedMotion: 
   const target = HOME_TARGET.clone()
   const posGoal = HOME_POS.clone()
   const targetGoal = HOME_TARGET.clone()
+  let mode: 'home' | { x: number; z: number } = 'home'
+  let framing = 1
 
   const apply = () => {
     camera.position.copy(pos)
@@ -20,15 +22,30 @@ export function createCameraRig(camera: THREE.PerspectiveCamera, reducedMotion: 
   }
   apply()
 
+  const applyGoals = () => {
+    if (mode === 'home') {
+      // Pull back on narrow stages so the outer modules stay in frame.
+      posGoal.copy(HOME_TARGET).addScaledVector(HOME_POS.clone().sub(HOME_TARGET), framing)
+      targetGoal.copy(HOME_TARGET)
+    } else {
+      posGoal.set(mode.x * 0.7, 3.4, mode.z + 8.5)
+      targetGoal.set(mode.x, 1.2, mode.z)
+    }
+  }
+
   return {
     goHome() {
-      posGoal.copy(HOME_POS)
-      targetGoal.copy(HOME_TARGET)
+      mode = 'home'
+      applyGoals()
     },
     /** Focus a module at world (x, z). */
     focus(x: number, z: number) {
-      posGoal.set(x * 0.7, 3.4, z + 8.5)
-      targetGoal.set(x, 1.2, z)
+      mode = { x, z }
+      applyGoals()
+    },
+    setAspect(aspect: number) {
+      framing = aspect >= 1.7 ? 1 : 1 + (1.7 - aspect) * 1.2
+      applyGoals()
     },
     update(dt: number): boolean {
       const k = reducedMotion ? 1 : 1 - Math.exp(-dt * 4)

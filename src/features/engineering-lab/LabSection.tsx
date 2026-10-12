@@ -177,6 +177,11 @@ export function LabSection() {
           <p className="muted" data-motion>Select a module to see how it fits into EduVerse.</p>
         )}
       </div>
+      <p className="lab-cta">
+        <Link className="btn" to="/projects/eduverse">
+          Read the full EduVerse case study
+        </Link>
+      </p>
     </section>
   )
 }
