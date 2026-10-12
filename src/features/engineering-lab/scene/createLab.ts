@@ -1,13 +1,14 @@
 import * as THREE from 'three'
+import type { NodeKind } from '../../../data/eduverse-graph'
 import { createCameraRig } from './camera'
 import { buildEnvironment } from './environment'
-import { moduleX } from './layout'
+import { createModuleKit } from './modules'
 import { detectQuality, maxPixelRatio } from './quality'
 
-export type LabProject = { id: string; label: string }
+export type LabNode = { id: string; label: string; kind: NodeKind; pos: [number, number] }
 
 export type LabOptions = {
-  projects: LabProject[]
+  nodes: LabNode[]
   reducedMotion: boolean
   maxPixelRatio?: number
   onSelect: (id: string) => void
@@ -18,36 +19,33 @@ export type LabOptions = {
 export type Lab = {
   setSelected: (id: string | null) => void
   setHighlighted: (id: string | null) => void
+  /** Node ids that should glow as part of an active trace. */
+  setActiveNodes: (ids: string[]) => void
   dispose: () => void
-  stats: () => { geometries: number; textures: number; frames: number }
+  stats: () => { geometries: number; textures: number; frames: number; quality: string }
 }
 
 const CYAN = new THREE.Color(0x36bffa)
 const AMBER = new THREE.Color(0xf0ad62)
 const OBSIDIAN = 0x0a0d12
-const GRAPHITE = 0x1d2733
 
 type LabModule = {
   id: string
   group: THREE.Group
   material: THREE.MeshStandardMaterial
   line: THREE.LineBasicMaterial
+  label: HTMLElement
   glow: number
   lift: number
-  baseY: number
 }
 
 /**
- * Three.js owns this scene: renderer, camera, lights, picking and the render loop.
- * The loop only runs while something is moving, so an idle scene costs nothing.
+ * Three.js owns this scene: renderer, camera, lights, picking, labels and the render
+ * loop. The loop only runs while something is moving, so an idle scene costs nothing.
  */
 export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
-  const { projects, reducedMotion } = opts
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    powerPreference: 'high-performance',
-  })
+  const { nodes, reducedMotion } = opts
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
   const quality = detectQuality()
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, opts.maxPixelRatio ?? 2, maxPixelRatio(quality)))
   renderer.setClearColor(OBSIDIAN)
@@ -58,52 +56,27 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
   const rig = createCameraRig(camera, reducedMotion)
 
   const disposables: { dispose: () => void }[] = []
-  const track = <T extends { dispose: () => void }>(o: T): T => {
-    disposables.push(o)
-    return o
-  }
+  const track = <T extends { dispose: () => void }>(o: T): T => (disposables.push(o), o)
+  const kit = createModuleKit(track)
 
-  // Project modules: a stack of "server" slabs on a pedestal.
-  const slabGeo = track(new THREE.BoxGeometry(1.7, 0.5, 1.3))
-  const edgeGeo = track(new THREE.EdgesGeometry(slabGeo))
-  const baseGeo = track(new THREE.CylinderGeometry(1.7, 1.9, 0.16, 48))
-  const baseMat = track(new THREE.MeshStandardMaterial({ color: 0x151c25, roughness: 0.7, metalness: 0.3 }))
+  // Labels: a DOM overlay positioned from projected world coordinates (aria-hidden;
+  // the accessible equivalent is the module list rendered by React).
+  const stage = canvas.parentElement!
+  const labelLayer = document.createElement('div')
+  labelLayer.className = 'lab-labels'
+  labelLayer.setAttribute('aria-hidden', 'true')
+  stage.append(labelLayer)
 
-  const modules: LabModule[] = projects.map((p, i) => {
-    const group = new THREE.Group()
-    group.position.set(moduleX(i, projects.length), 0, -3)
-    group.userData.moduleId = p.id
-
-    const base = new THREE.Mesh(baseGeo, baseMat)
-    base.position.y = 0.08
-    base.userData.moduleId = p.id
-    group.add(base)
-
-    const material = track(
-      new THREE.MeshStandardMaterial({
-        color: GRAPHITE,
-        roughness: 0.45,
-        metalness: 0.6,
-        emissive: CYAN,
-        emissiveIntensity: 0.12,
-      }),
-    )
-    const line = track(new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.8 }))
-    const stack = new THREE.Group()
-    for (let s = 0; s < 3; s++) {
-      const slab = new THREE.Mesh(slabGeo, material)
-      slab.position.y = 0.55 + s * 0.58
-      slab.userData.moduleId = p.id
-      const edges = new THREE.LineSegments(edgeGeo, line)
-      edges.position.copy(slab.position)
-      stack.add(slab, edges)
-    }
-    group.add(stack)
-    scene.add(group)
-    return { id: p.id, group, material, line, glow: 0.12, lift: 0, baseY: 0 }
+  const modules: LabModule[] = nodes.map((n) => {
+    const built = kit.build(n.kind, n.id)
+    built.group.position.set(n.pos[0], 0, n.pos[1])
+    scene.add(built.group)
+    const label = document.createElement('span')
+    label.className = 'lab-label'
+    label.textContent = n.label
+    labelLayer.append(label)
+    return { id: n.id, group: built.group, material: built.material, line: built.line, label, glow: 0.12, lift: 0 }
   })
-
-  // Pick against meshes only: line segments have a wide default raycast threshold.
   const pickables: THREE.Object3D[] = []
   for (const m of modules) m.group.traverse((o) => { if (o instanceof THREE.Mesh) pickables.push(o) })
   const raycaster = new THREE.Raycaster()
@@ -112,6 +85,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
   let selected: string | null = null
   let highlighted: string | null = null
   let hovered: string | null = null
+  let active = new Set<string>()
   let raf = 0
   let disposed = false
   let frames = 0
@@ -122,7 +96,21 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
     if (sel) rig.focus(sel.group.position.x, sel.group.position.z)
     else rig.goHome()
   }
-  setCameraGoals()
+
+  const v = new THREE.Vector3()
+  const updateLabels = () => {
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
+    for (const m of modules) {
+      v.set(m.group.position.x, 2.5 + m.lift, m.group.position.z).project(camera)
+      const visible = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1
+      m.label.style.opacity = visible ? '' : '0'
+      m.label.style.transform = `translate(-50%, -100%) translate(${((v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px)`
+      const on = m.id === selected || m.id === highlighted || m.id === hovered
+      m.label.classList.toggle('is-on', on)
+      m.label.classList.toggle('is-selected', m.id === selected)
+    }
+  }
 
   const update = (dt: number): boolean => {
     const k = reducedMotion ? 1 : 1 - Math.exp(-dt * 10)
@@ -130,14 +118,15 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
     for (const m of modules) {
       const isSel = m.id === selected
       const isHi = m.id === highlighted || m.id === hovered
-      const glowGoal = isSel ? 0.9 : isHi ? 0.55 : 0.12
+      const isActive = active.has(m.id)
+      const glowGoal = isSel ? 0.9 : isActive ? 0.75 : isHi ? 0.55 : 0.12
       const liftGoal = isSel ? 0.22 : isHi ? 0.12 : 0
       m.glow += (glowGoal - m.glow) * k
       m.lift += (liftGoal - m.lift) * k
       m.material.emissiveIntensity = m.glow
       m.material.emissive.copy(isSel ? AMBER : CYAN)
       m.line.color.copy(isSel ? AMBER : CYAN)
-      m.group.position.y = m.baseY + m.lift
+      m.group.position.y = m.lift
       if (Math.abs(glowGoal - m.glow) > 0.003 || Math.abs(liftGoal - m.lift) > 0.002) moving = true
     }
     if (rig.update(dt)) moving = true
@@ -151,6 +140,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
     last = t
     const moving = update(dt)
     renderer.render(scene, camera)
+    updateLabels()
     frames++
     if (moving) requestFrame()
   }
@@ -224,10 +214,15 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
       highlighted = id
       requestFrame()
     },
+    setActiveNodes(ids) {
+      active = new Set(ids)
+      requestFrame()
+    },
     stats: () => ({
       geometries: renderer.info.memory.geometries,
       textures: renderer.info.memory.textures,
       frames,
+      quality,
     }),
     dispose() {
       if (disposed) return
@@ -239,6 +234,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
       canvas.removeEventListener('click', onClick as EventListener)
       canvas.removeEventListener('webglcontextlost', onContextLost)
       document.removeEventListener('visibilitychange', onVisibility)
+      labelLayer.remove()
       environment.dispose()
       for (const d of disposables) d.dispose()
       renderer.dispose()

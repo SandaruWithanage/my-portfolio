@@ -34,12 +34,12 @@ describe('LabSection without WebGL', () => {
     const user = userEvent.setup()
     setup()
     await user.tab()
-    expect(screen.getByRole('button', { name: /EduVerse/ })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /Next.js client/ })).toHaveFocus()
     await user.keyboard('{Enter}')
-    expect(screen.getByRole('button', { name: /EduVerse/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('link', { name: /Read the EduVerse case study/ })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /Next.js client/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('link', { name: /See this in the EduVerse case study/ })).toHaveAttribute(
       'href',
-      '/projects/eduverse',
+      '/projects/eduverse#architecture',
     )
     await user.keyboard('{Enter}')
     expect(screen.getByText(/Select a module/)).toBeInTheDocument()

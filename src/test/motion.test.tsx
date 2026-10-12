@@ -91,7 +91,7 @@ describe('lab panel transitions', () => {
         <LabSection />
       </MemoryRouter>,
     )
-    const button = screen.getByRole('button', { name: /EduVerse/ })
+    const button = screen.getByRole('button', { name: /NestJS API/ })
     const before = calls.revert
     for (let i = 0; i < 10; i++) await user.click(button)
     expect(calls.revert - before).toBe(10)

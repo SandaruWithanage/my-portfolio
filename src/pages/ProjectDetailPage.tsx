@@ -5,6 +5,9 @@ import { getProject } from '../data/projects'
 import { useDocumentTitle } from '../app/useDocumentTitle'
 import { NotFoundPage } from './NotFoundPage'
 
+const slugify = (h: string) =>
+  h.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
 export function ProjectDetailPage() {
   const { slug } = useParams()
   const project = getProject(slug)
@@ -50,7 +53,7 @@ export function ProjectDetailPage() {
         ))}
       </ul>
       {project.sections.map((s, i) => (
-        <section key={s.heading} className="case-section" data-motion aria-labelledby={`s${i}`}>
+        <section key={s.heading} id={slugify(s.heading)} className="case-section" data-motion aria-labelledby={`s${i}`}>
           <span className="num">{String(i + 1).padStart(2, '0')}</span>
           <h2 id={`s${i}`}>{s.heading}</h2>
           {s.body.map((para) => (

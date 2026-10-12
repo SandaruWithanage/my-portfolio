@@ -94,3 +94,7 @@ ul { padding-left: 1.2em; }
 .lab-panel { background: var(--graphite); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; min-height: 5rem; }
 .lab-panel h3 { margin-bottom: 0.5rem; }
 main:focus { outline: none; }
+.lab-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.lab-label { position: absolute; left: 0; top: 0; font: 0.7rem var(--mono); letter-spacing: 0.06em; color: var(--slate); background: rgba(10, 13, 18, 0.7); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.45rem; white-space: nowrap; will-change: transform; }
+.lab-label.is-on { color: var(--ice); border-color: var(--cyan); }
+.lab-label.is-selected { color: var(--obsidian); background: var(--amber); border-color: var(--amber); }

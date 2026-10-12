@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { DURATION } from '../../components/motion/motion'
 import { useReveal } from '../../components/motion/useReveal'
-import type { Lab, LabProject } from './scene/createLab'
+import type { Lab, LabNode } from './scene/createLab'
 
 type Props = {
-  projects: LabProject[]
+  nodes: LabNode[]
   selectedId: string | null
   highlightedId: string | null
+  activeNodeIds: string[]
   reducedMotion: boolean
   onSelect: (id: string) => void
   onHover: (id: string | null) => void
@@ -30,7 +31,7 @@ export default function LabCanvas(props: Props) {
       .then(({ createLab }) => {
         if (cancelled) return
         lab = createLab(canvas, {
-          projects: latest.current.projects,
+          nodes: latest.current.nodes,
           reducedMotion: latest.current.reducedMotion,
           maxPixelRatio: window.innerWidth < 640 ? 1.5 : 2,
           onSelect: (id) => latest.current.onSelect(id),
@@ -39,6 +40,7 @@ export default function LabCanvas(props: Props) {
         })
         lab.setSelected(latest.current.selectedId)
         lab.setHighlighted(latest.current.highlightedId)
+        lab.setActiveNodes(latest.current.activeNodeIds)
         labRef.current = lab
       })
       .catch(() => {
@@ -59,6 +61,9 @@ export default function LabCanvas(props: Props) {
   useEffect(() => {
     labRef.current?.setHighlighted(props.highlightedId)
   }, [props.highlightedId])
+  useEffect(() => {
+    labRef.current?.setActiveNodes(props.activeNodeIds)
+  }, [props.activeNodeIds])
 
   return <canvas ref={canvasRef} className="lab-canvas" aria-hidden="true" />
 }

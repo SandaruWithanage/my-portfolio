@@ -15,22 +15,27 @@ const links = [
 const year = new Date().getFullYear()
 
 export function Layout() {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   const mainRef = useRef<HTMLElement>(null)
   const firstRender = useRef(true)
 
   // Subtle, non-blocking fade on route change (content is already rendered and usable).
   useReveal(mainRef, { duration: DURATION.route, from: 0.4, y: 0, deps: [pathname] })
 
-  // Move focus and scroll to the new page; skip the initial load.
+  // Move focus and scroll on navigation. A #hash scrolls to its section (also on a
+  // direct load); otherwise skip the initial load and reset to the top.
   useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false
+    const initial = firstRender.current
+    firstRender.current = false
+    const target = hash ? document.getElementById(decodeURIComponent(hash.slice(1))) : null
+    if (target) {
+      target.scrollIntoView()
       return
     }
-    window.scrollTo(0, 0)
+    if (initial) return
     mainRef.current?.focus({ preventScroll: true })
-  }, [pathname])
+    window.scrollTo(0, 0)
+  }, [pathname, hash])
 
   return (
     <>

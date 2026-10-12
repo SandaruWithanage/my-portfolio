@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom'
 import { DURATION } from '../../components/motion/motion'
 import { usePrefersReducedMotion } from '../../components/motion/usePrefersReducedMotion'
 import { useReveal } from '../../components/motion/useReveal'
-import { projects } from '../../data/projects'
+import { graphNodes, nodeById } from '../../data/eduverse-graph'
 import { LabFallback } from './fallback/LabFallback'
 import { isWebGLAvailable, useInViewOnce } from './support'
 
 const LabCanvas = lazy(() => import('./LabCanvas'))
 
-const labProjects = projects.map((p) => ({ id: p.slug, label: p.title }))
+const labNodes = graphNodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, pos: n.pos }))
+const NO_NODES: string[] = []
 
 export function LabSection() {
   const [stage, setStage] = useState<HTMLDivElement | null>(null)
@@ -23,7 +24,7 @@ export function LabSection() {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
 
-  const selected = projects.find((p) => p.slug === selectedId)
+  const selected = selectedId ? nodeById(selectedId) : undefined
   const show3d = webgl && !force2d && !failure
   const fallbackReason = !webgl
     ? 'WebGL is not available in this browser, so the 3D lab is replaced with this 2D view.'
@@ -48,7 +49,7 @@ export function LabSection() {
       <div className="lab-head">
         <div>
           <p className="eyebrow">Engineering lab</p>
-          <h2 id="lab-title">Explore the systems I build</h2>
+          <h2 id="lab-title">Explore EduVerse’s architecture</h2>
         </div>
         {webgl && !failure && (
           <button type="button" className="btn" onClick={() => setForce2d((v) => !v)}>
@@ -62,9 +63,10 @@ export function LabSection() {
           inView && (
             <Suspense fallback={<p className="lab-loading" role="status">Loading 3D lab…</p>}>
               <LabCanvas
-                projects={labProjects}
+                nodes={labNodes}
                 selectedId={selectedId}
                 highlightedId={focusedId ?? hoveredId}
+                activeNodeIds={NO_NODES}
                 reducedMotion={reducedMotion}
                 onSelect={setSelectedId}
                 onHover={setHoveredId}
@@ -77,25 +79,24 @@ export function LabSection() {
         )}
         {show3d && hoveredId && (
           <span className="lab-tip" aria-hidden="true">
-            {projects.find((p) => p.slug === hoveredId)?.title}
+            {nodeById(hoveredId)?.label}
           </span>
         )}
       </div>
 
-      <ul className="lab-select" aria-label="Project modules">
-        {projects.map((p) => (
-          <li key={p.slug}>
+      <ul className="lab-select" aria-label="EduVerse system modules">
+        {graphNodes.map((n) => (
+          <li key={n.id}>
             <button
               type="button"
-              aria-pressed={p.slug === selectedId}
-              onClick={() => setSelectedId((cur) => (cur === p.slug ? null : p.slug))}
-              onFocus={() => setFocusedId(p.slug)}
+              aria-pressed={n.id === selectedId}
+              onClick={() => setSelectedId((cur) => (cur === n.id ? null : n.id))}
+              onFocus={() => setFocusedId(n.id)}
               onBlur={() => setFocusedId(null)}
-              onMouseEnter={() => setHoveredId(p.slug)}
+              onMouseEnter={() => setHoveredId(n.id)}
               onMouseLeave={() => setHoveredId(null)}
             >
-              <span className="lab-select-title">{p.title}</span>
-              <span className="muted">{p.summary}</span>
+              <span className="lab-select-title">{n.label}</span>
             </button>
           </li>
         ))}
@@ -104,19 +105,19 @@ export function LabSection() {
       <div className="lab-panel" aria-live="polite" ref={panelRef}>
         {selected ? (
           <>
-            <p className="badge" data-motion>Selected · {selected.status}</p>
-            <h3 data-motion>{selected.title}</h3>
-            <ul data-motion>
-              {selected.highlights.map((h) => (
-                <li key={h}>{h}</li>
-              ))}
-            </ul>
-            <Link data-motion className="btn btn-primary" to={`/projects/${selected.slug}`}>
-              Read the {selected.title} case study
+            <p className="badge" data-motion>Selected module</p>
+            <h3 data-motion>{selected.label}</h3>
+            <p data-motion>{selected.summary}</p>
+            <Link
+              data-motion
+              className="btn btn-primary"
+              to={`/projects/eduverse#${selected.anchor}`}
+            >
+              See this in the EduVerse case study
             </Link>
           </>
         ) : (
-          <p className="muted" data-motion>Select a module to see its engineering summary.</p>
+          <p className="muted" data-motion>Select a module to see how it fits into EduVerse.</p>
         )}
       </div>
     </section>

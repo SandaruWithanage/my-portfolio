@@ -27,7 +27,7 @@ export function createCameraRig(camera: THREE.PerspectiveCamera, reducedMotion: 
     },
     /** Focus a module at world (x, z). */
     focus(x: number, z: number) {
-      posGoal.set(x * 0.7, 3.0, z + 6)
+      posGoal.set(x * 0.7, 3.4, z + 8.5)
       targetGoal.set(x, 1.2, z)
     },
     update(dt: number): boolean {
