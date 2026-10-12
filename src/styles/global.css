@@ -122,3 +122,56 @@ main:focus { outline: none; }
   .lab-stage { height: clamp(260px, 70vw, 360px); }
   .trace .btn { padding: 0.45rem 0.75rem; }
 }
+
+/* HUD bar (inner pages) */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.hud-bar { background: rgba(10, 13, 18, 0.92); border-bottom: 1px solid rgba(54, 191, 250, 0.3); }
+.hud-left { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.hud-home { color: var(--cyan); }
+.hud-back { font: 0.8rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ice); background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 0.45rem 0.8rem; min-height: 44px; cursor: pointer; }
+.hud-back:hover { border-color: var(--cyan); }
+.hud-location { margin: 0; font: 0.75rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); }
+.hud-bar .nav a, .hud-home { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* Command-centre hub */
+.hub { position: relative; min-height: 100vh; overflow: hidden; padding: clamp(1rem, 4vw, 3rem);
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(54, 191, 250, 0.14), transparent 60%),
+    linear-gradient(rgba(54, 191, 250, 0.05) 1px, transparent 1px) 0 0 / 100% 40px,
+    linear-gradient(90deg, rgba(54, 191, 250, 0.05) 1px, transparent 1px) 0 0 / 40px 100%,
+    var(--obsidian); }
+.hub--dormant { background-color: #07090c; }
+.hub-frame { position: absolute; inset: clamp(0.5rem, 2vw, 1.25rem); pointer-events: none; }
+.hub-corner { position: absolute; width: 28px; height: 28px; border-color: rgba(54, 191, 250, 0.55); border-style: solid; border-width: 0; }
+.hub-corner--tl { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; }
+.hub-corner--tr { top: 0; right: 0; border-top-width: 2px; border-right-width: 2px; }
+.hub-corner--bl { bottom: 0; left: 0; border-bottom-width: 2px; border-left-width: 2px; }
+.hub-corner--br { bottom: 0; right: 0; border-bottom-width: 2px; border-right-width: 2px; }
+.hub-top { position: relative; display: flex; justify-content: center; padding: 0.4rem 2.25rem 0; text-align: center; }
+.hub-status { font: 0.75rem var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan); }
+.hub--dormant .hub-status { color: var(--slate); }
+.hub-main { position: relative; display: grid; justify-items: center; text-align: center; gap: 2rem; max-width: 1080px; margin: clamp(2rem, 8vh, 5rem) auto 0; }
+.hub-main:focus { outline: none; }
+.hub-identity h1 { margin-bottom: 0.25rem; }
+.hub-role { font: 600 1.15rem var(--mono); letter-spacing: 0.08em; color: var(--cyan); margin-bottom: 1rem; }
+.hub-statement { color: var(--slate); max-width: 60ch; margin-inline: auto; }
+.hub--dormant .hub-identity { opacity: 0.85; }
+.hub-controls, .hub-boot { display: grid; gap: 0.75rem; justify-items: center; }
+.hub-controls { grid-auto-flow: column; }
+.hub-controls .btn, .hub-boot .btn { min-height: 44px; font: inherit; font-weight: 600; cursor: pointer; background: transparent; }
+.hub-controls .btn-primary { background: var(--amber); }
+.hub-boot-log { list-style: none; margin: 0; padding: 0; font: 0.85rem var(--mono); color: var(--cyan); text-align: left; }
+.boot-bar { width: min(320px, 80vw); height: 4px; background: var(--graphite-2); border-radius: 2px; overflow: hidden; }
+.boot-bar-fill { display: block; height: 100%; background: var(--cyan); transform-origin: left; }
+.hub-destinations { width: 100%; }
+.hub-destinations:focus { outline: none; }
+.hub-destinations ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.holo-link { display: grid; gap: 0.35rem; text-align: left; text-decoration: none; color: var(--ice); padding: 1.1rem 1.2rem; min-height: 44px; border: 1px solid rgba(54, 191, 250, 0.35); border-radius: 10px; background: linear-gradient(160deg, rgba(54, 191, 250, 0.12), rgba(21, 28, 37, 0.85)); box-shadow: 0 0 24px rgba(54, 191, 250, 0.08) inset; transition: border-color 160ms, box-shadow 160ms; }
+.holo-link:hover, .holo-link:focus-visible { color: var(--ice); border-color: var(--cyan); box-shadow: 0 0 28px rgba(54, 191, 250, 0.25) inset; }
+.holo-code { font: 0.7rem var(--mono); letter-spacing: 0.15em; color: var(--amber); }
+.holo-title { font-weight: 700; font-size: 1.1rem; }
+.holo-summary { color: var(--slate); font-size: 0.9rem; }
+@media (max-width: 640px) {
+  .hub-controls { grid-auto-flow: row; }
+  .hub-destinations ul { grid-template-columns: 1fr; }
+}

@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { NavLink, Link, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { destinationLabel } from '../features/hub/destinations'
 import { DURATION } from './motion/motion'
 import { useReveal } from './motion/useReveal'
 import { profile } from '../data/profile'
 
 const links = [
-  { to: '/', label: 'Home', end: true },
   { to: '/projects', label: 'Projects' },
   { to: '/engineering', label: 'Engineering' },
   { to: '/background', label: 'Background' },
@@ -18,6 +18,13 @@ export function Layout() {
   const { pathname, hash } = useLocation()
   const mainRef = useRef<HTMLElement>(null)
   const firstRender = useRef(true)
+  const navigate = useNavigate()
+  // Back within the app when there is history; otherwise return to the lab.
+  const goBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
+    if (idx > 0) navigate(-1)
+    else navigate('/')
+  }
 
   // Subtle, non-blocking fade on route change (content is already rendered and usable).
   useReveal(mainRef, { duration: DURATION.route, from: 0.4, y: 0, deps: [pathname] })
@@ -42,14 +49,23 @@ export function Layout() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <header className="site-header">
+      <header className="site-header hud-bar">
         <div className="container">
-          <Link to="/" className="brand">
-            SANDARU.DEV
-          </Link>
+          <div className="hud-left">
+            <Link to="/" className="brand hud-home">
+              <span aria-hidden="true">◂ </span>Return to lab
+            </Link>
+            <button type="button" className="hud-back" onClick={goBack}>
+              Back
+            </button>
+            <p className="hud-location">
+              <span className="visually-hidden">Current destination: </span>
+              {destinationLabel(pathname)}
+            </p>
+          </div>
           <nav className="nav" aria-label="Primary">
             {links.map((l) => (
-              <NavLink key={l.to} to={l.to} end={l.end}>
+              <NavLink key={l.to} to={l.to}>
                 {l.label}
               </NavLink>
             ))}

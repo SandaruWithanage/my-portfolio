@@ -11,15 +11,13 @@ function renderAt(path: string) {
 }
 
 describe('routing', () => {
-  it('renders the home page with name and primary action', () => {
+  it('renders the hub at / with the name and no site navigation bar', () => {
     renderAt('/')
     expect(
       screen.getByRole('heading', { level: 1, name: 'Sandaru Withanage' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Explore my work' })).toHaveAttribute(
-      'href',
-      '/projects',
-    )
+    expect(screen.queryByRole('navigation', { name: 'Primary' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Initialize lab' })).toBeInTheDocument()
   })
 
   it('loads each project case study directly by URL', () => {
