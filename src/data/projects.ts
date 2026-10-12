@@ -25,7 +25,7 @@ export const projects: Project[] = [
       'Live multi-tenant SaaS for Sri Lankan schools with database-enforced tenant isolation and offline-first data capture.',
     period: 'September 2025 – Present',
     status: 'In production (Phase 1, first school)',
-    role: 'Architect and developer',
+    role: 'Lead developer, architect and project owner (team project)',
     stack: ['NestJS', 'Next.js', 'PostgreSQL', 'Prisma', 'Redis', 'BullMQ', 'Docker'],
     url: 'https://eduverse.site',
     highlights: [
