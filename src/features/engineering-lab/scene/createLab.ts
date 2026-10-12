@@ -1,5 +1,8 @@
 import * as THREE from 'three'
-import { homeDistance, moduleX } from './layout'
+import { createCameraRig } from './camera'
+import { buildEnvironment } from './environment'
+import { moduleX } from './layout'
+import { detectQuality, maxPixelRatio } from './quality'
 
 export type LabProject = { id: string; label: string }
 
@@ -45,35 +48,14 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
     antialias: true,
     powerPreference: 'high-performance',
   })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, opts.maxPixelRatio ?? 2))
+  const quality = detectQuality()
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, opts.maxPixelRatio ?? 2, maxPixelRatio(quality)))
   renderer.setClearColor(OBSIDIAN)
 
   const scene = new THREE.Scene()
-  scene.fog = new THREE.Fog(OBSIDIAN, 9, 24)
-
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 60)
-  const camPos = new THREE.Vector3()
-  const camTarget = new THREE.Vector3()
-  const camPosGoal = new THREE.Vector3()
-  const camTargetGoal = new THREE.Vector3()
-
-  // Lighting
-  scene.add(new THREE.HemisphereLight(0x9fb4c8, OBSIDIAN, 0.7))
-  const key = new THREE.DirectionalLight(0xffffff, 1.1)
-  key.position.set(4, 8, 6)
-  scene.add(key)
-  const rim = new THREE.PointLight(0x36bffa, 30, 16, 2)
-  rim.position.set(0, 3.5, -3)
-  scene.add(rim)
-
-  // Floor
-  const grid = new THREE.GridHelper(40, 40, 0x36bffa, GRAPHITE)
-  const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material]
-  for (const m of gridMaterials) {
-    m.transparent = true
-    m.opacity = 0.28
-  }
-  scene.add(grid)
+  const environment = buildEnvironment(scene, quality)
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 80)
+  const rig = createCameraRig(camera, reducedMotion)
 
   const disposables: { dispose: () => void }[] = []
   const track = <T extends { dispose: () => void }>(o: T): T => {
@@ -89,7 +71,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
 
   const modules: LabModule[] = projects.map((p, i) => {
     const group = new THREE.Group()
-    group.position.x = moduleX(i, projects.length)
+    group.position.set(moduleX(i, projects.length), 0, -3)
     group.userData.moduleId = p.id
 
     const base = new THREE.Mesh(baseGeo, baseMat)
@@ -137,21 +119,13 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
 
   const setCameraGoals = () => {
     const sel = modules.find((m) => m.id === selected)
-    if (sel) {
-      camPosGoal.set(sel.group.position.x, 2.6, 6)
-      camTargetGoal.set(sel.group.position.x, 1.3, 0)
-    } else {
-      camPosGoal.set(0, 3.6, homeDistance(modules.length))
-      camTargetGoal.set(0, 1.2, 0)
-    }
+    if (sel) rig.focus(sel.group.position.x, sel.group.position.z)
+    else rig.goHome()
   }
   setCameraGoals()
-  camPos.copy(camPosGoal)
-  camTarget.copy(camTargetGoal)
 
   const update = (dt: number): boolean => {
     const k = reducedMotion ? 1 : 1 - Math.exp(-dt * 10)
-    const kc = reducedMotion ? 1 : 1 - Math.exp(-dt * 4)
     let moving = false
     for (const m of modules) {
       const isSel = m.id === selected
@@ -166,11 +140,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
       m.group.position.y = m.baseY + m.lift
       if (Math.abs(glowGoal - m.glow) > 0.003 || Math.abs(liftGoal - m.lift) > 0.002) moving = true
     }
-    camPos.lerp(camPosGoal, kc)
-    camTarget.lerp(camTargetGoal, kc)
-    if (camPos.distanceTo(camPosGoal) > 0.01 || camTarget.distanceTo(camTargetGoal) > 0.01) moving = true
-    camera.position.copy(camPos)
-    camera.lookAt(camTarget)
+    if (rig.update(dt)) moving = true
     return moving
   }
 
@@ -269,8 +239,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
       canvas.removeEventListener('click', onClick as EventListener)
       canvas.removeEventListener('webglcontextlost', onContextLost)
       document.removeEventListener('visibilitychange', onVisibility)
-      grid.geometry.dispose()
-      for (const m of gridMaterials) m.dispose()
+      environment.dispose()
       for (const d of disposables) d.dispose()
       renderer.dispose()
       renderer.forceContextLoss()
