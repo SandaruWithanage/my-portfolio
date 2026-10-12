@@ -166,12 +166,65 @@ main:focus { outline: none; }
 .hub-destinations { width: 100%; }
 .hub-destinations:focus { outline: none; }
 .hub-destinations ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.holo-link { display: grid; gap: 0.35rem; text-align: left; text-decoration: none; color: var(--ice); padding: 1.1rem 1.2rem; min-height: 44px; border: 1px solid rgba(54, 191, 250, 0.35); border-radius: 10px; background: linear-gradient(160deg, rgba(54, 191, 250, 0.12), rgba(21, 28, 37, 0.85)); box-shadow: 0 0 24px rgba(54, 191, 250, 0.08) inset; transition: border-color 160ms, box-shadow 160ms; }
-.holo-link:hover, .holo-link:focus-visible { color: var(--ice); border-color: var(--cyan); box-shadow: 0 0 28px rgba(54, 191, 250, 0.25) inset; }
+.holo-link { display: grid; gap: 0.35rem; width: 100%; height: 100%; text-align: left; font: inherit; cursor: pointer; color: var(--ice); padding: 1.1rem 1.2rem; min-height: 44px; border: 1px solid rgba(54, 191, 250, 0.45); border-radius: 18px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(54, 191, 250, 0.08)), rgba(10, 16, 24, 0.45);
+  -webkit-backdrop-filter: blur(16px) saturate(170%); backdrop-filter: blur(16px) saturate(170%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 0 28px rgba(54, 191, 250, 0.1), 0 0 30px rgba(54, 191, 250, 0.12);
+  transition: border-color 160ms, box-shadow 160ms, transform 200ms; }
+.holo-link:hover, .holo-link:focus-visible { color: var(--ice); border-color: var(--cyan); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 0 36px rgba(54, 191, 250, 0.2), 0 0 44px rgba(54, 191, 250, 0.3); transform: translateZ(24px); }
+.holo-link[aria-expanded='true'] { border-color: var(--amber); border-width: 2px; }
 .holo-code { font: 0.7rem var(--mono); letter-spacing: 0.15em; color: var(--amber); }
 .holo-title { font-weight: 700; font-size: 1.1rem; }
 .holo-summary { color: var(--slate); font-size: 0.9rem; }
+
+/* Floating screen field: tiles tilt toward the centre and follow the mouse (--look-*). */
+.hub { --look-x: 0; --look-y: 0; }
+.hub-destinations { perspective: 1400px; }
+.holo-field { transform-style: preserve-3d; transform: rotateY(calc(var(--look-x) * 8deg)) rotateX(calc(var(--look-y) * -5deg)); transition: transform 500ms cubic-bezier(.2, .8, .2, 1), opacity 400ms, filter 400ms; }
+@media (min-width: 900px) {
+  .hub-destinations ul.holo-field { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 30%; }
+  .holo-panel { transform-style: preserve-3d; }
+  .holo-panel:nth-child(odd) { transform: rotateY(18deg); transform-origin: right center; }
+  .holo-panel:nth-child(even) { transform: rotateY(-18deg); transform-origin: left center; }
+}
+.hub--screen-open .holo-field, .hub--screen-open .hub-identity { opacity: 0.35; filter: blur(2px); }
+.hub-identity { transition: opacity 400ms, filter 400ms; }
+
+/* Open screens: liquid-glass windows in a 3D layer over the lab. */
+.holo-layer { --pad: clamp(0.5rem, 3vw, 2.5rem); --rail: 64px; position: fixed; inset: 0; z-index: 20; perspective: 1500px; pointer-events: none; }
+.holo-window { position: absolute; left: 50%; top: var(--pad); width: min(1100px, 100vw - 2 * var(--pad)); height: min(760px, 100dvh - 2 * var(--pad) - var(--rail)); margin-left: calc(min(1100px, 100vw - 2 * var(--pad)) / -2); pointer-events: auto; transform-style: preserve-3d; will-change: transform, opacity; }
+.holo-rail { position: absolute; left: 50%; bottom: calc(var(--pad) / 2); transform: translateX(-50%); z-index: 100; display: flex; gap: 4px; padding: 4px; max-width: calc(100vw - 1rem); overflow-x: auto; pointer-events: auto; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02)), rgba(8, 13, 20, 0.55); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 12px 40px rgba(0, 0, 0, 0.45); }
+.holo-rail-item { min-height: 44px; padding: 0 1rem; white-space: nowrap; border: 0; border-radius: 999px; background: transparent; color: var(--slate); font: 600 0.85rem var(--sans); cursor: pointer; }
+.holo-rail-item:hover { color: var(--ice); background: rgba(255, 255, 255, 0.06); }
+.holo-rail-item[aria-current='true'] { color: var(--ice); background: rgba(54, 191, 250, 0.16); box-shadow: inset 0 0 0 1px rgba(54, 191, 250, 0.6); }
+.holo-window-body { display: flex; flex-direction: column; width: 100%; height: 100%; overflow: hidden; color: var(--ice); border: 1px solid rgba(54, 191, 250, 0.55); border-radius: 26px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03) 40%, rgba(54, 191, 250, 0.08)), rgba(8, 13, 20, 0.86);
+  -webkit-backdrop-filter: blur(26px) saturate(180%); backdrop-filter: blur(26px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 0 70px rgba(54, 191, 250, 0.1), 0 0 60px rgba(54, 191, 250, 0.22), 0 30px 80px rgba(0, 0, 0, 0.55); }
+.holo-window-body:focus { outline: none; }
+.holo-window-bar { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0.75rem 0.75rem 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.holo-window-title { margin: 0; flex: 1; font-weight: 700; font-size: 1.15rem; }
+.holo-window-page, .holo-window-close { display: inline-flex; white-space: nowrap; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 1rem; border-radius: 999px; font: 0.8rem var(--mono); letter-spacing: 0.06em; color: var(--ice); text-decoration: none; cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06); }
+.holo-window-close { padding: 0; }
+.holo-window-page:hover, .holo-window-close:hover { border-color: var(--cyan); color: var(--ice); }
+.holo-window-content { flex: 1; overflow: auto; overscroll-behavior: contain; }
+.holo-window-content .page { padding-block: 2rem 3rem; }
+.holo-window-raise { position: absolute; inset: 0; border-radius: 26px; cursor: pointer; border: 0; background: transparent; color: transparent; font: inherit; }
+.holo-window-raise:hover, .holo-window-raise:focus-visible { color: var(--ice); background: rgba(54, 191, 250, 0.08); }
+@media (prefers-reduced-transparency: reduce) {
+  .holo-link, .holo-window-body, .holo-rail { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--graphite); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-field { transform: none; }
+  .holo-link:hover, .holo-link:focus-visible { transform: none; }
+}
 @media (max-width: 640px) {
   .hub-controls { grid-auto-flow: row; }
+  .holo-layer { --pad: 0px; }
+  .holo-window:not([data-depth='0']) { visibility: hidden; }
+  .holo-window-bar .holo-code { display: none; }
+  .holo-window-bar { gap: 0.5rem; padding-left: 1rem; }
+  .holo-window-body { border-radius: 0; }
   .hub-destinations ul { grid-template-columns: 1fr; }
 }

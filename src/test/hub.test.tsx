@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -64,7 +64,8 @@ describe('hub boot', () => {
     const user = userEvent.setup()
     const router = renderAt('/')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
-    await user.click(screen.getByRole('link', { name: /Projects & Systems/ }))
+    await user.click(screen.getByRole('button', { name: /Projects & Systems/ }))
+    await user.click(screen.getByRole('link', { name: 'Open as page: Projects & Systems' }))
     expect(router.state.location.pathname).toBe('/projects')
     await user.click(screen.getByRole('link', { name: /Return to lab/ }))
     expect(screen.getByRole('status')).toHaveTextContent(/System online/)
@@ -93,7 +94,7 @@ describe('hub boot', () => {
 })
 
 describe('hub destinations', () => {
-  it('links each destination to an existing route, reachable by keyboard', async () => {
+  it('shows each destination as a screen tile, reachable by keyboard', async () => {
     const user = userEvent.setup()
     renderAt('/')
     await user.tab() // skip link
@@ -103,7 +104,7 @@ describe('hub destinations', () => {
     expect(screen.getByRole('button', { name: 'Skip intro' })).toHaveFocus()
     await user.keyboard('{Enter}')
     for (const d of destinations) {
-      expect(screen.getByRole('link', { name: new RegExp(d.title) })).toHaveAttribute('href', d.to)
+      expect(screen.getByRole('button', { name: new RegExp(d.title) })).toHaveAttribute('aria-expanded', 'false')
     }
   })
 
@@ -115,6 +116,93 @@ describe('hub destinations', () => {
     for (const banned of ['Breadcrumbs', 'BeyondHR', 'EZPOS', 'ezClerks', 'Divisarana', 'EV Charger', 'Résumé', 'Resume']) {
       expect(text, banned).not.toContain(banned)
     }
+  })
+})
+
+describe('holographic screens', () => {
+  const tile = (name: RegExp) =>
+    within(screen.getByRole('navigation', { name: 'Navigate systems' })).getByRole('button', { name })
+  const region = (name: string) => screen.queryByRole('region', { name })
+
+  it('opens a screen in place, keeps its route as a link and updates the URL', async () => {
+    const user = userEvent.setup()
+    const router = renderAt('/')
+    await user.click(screen.getByRole('button', { name: 'Skip intro' }))
+    await user.click(tile(/Identity & Communications/))
+    expect(router.state.location.pathname).toBe('/')
+    expect(router.state.location.search).toBe('?screen=contact')
+    expect(region('Identity & Communications')).toBeInTheDocument()
+    expect(tile(/Identity & Communications/)).toHaveAttribute('aria-expanded', 'true')
+    for (const d of destinations.filter((x) => x.id === 'contact')) {
+      expect(screen.getByRole('link', { name: `Open as page: ${d.title}` })).toHaveAttribute('href', d.to)
+    }
+  })
+
+  it('sends the open screen back when another opens, and brings it forward again', async () => {
+    const user = userEvent.setup()
+    renderAt('/')
+    await user.click(screen.getByRole('button', { name: 'Skip intro' }))
+    await user.click(tile(/Skills & Education/))
+    await user.click(tile(/Identity & Communications/))
+    const back = region('Skills & Education')!
+    expect(back).toHaveAttribute('inert')
+    expect(region('Identity & Communications')).not.toHaveAttribute('inert')
+    await user.click(screen.getByRole('button', { name: 'Bring Skills & Education forward' }))
+    expect(region('Skills & Education')).not.toHaveAttribute('inert')
+    expect(region('Identity & Communications')).toHaveAttribute('inert')
+  })
+
+  it('closing the front screen returns the one behind it; Esc closes too', async () => {
+    mockReducedMotion(true)
+    const user = userEvent.setup()
+    const router = renderAt('/')
+    await user.click(screen.getByRole('button', { name: 'Skip intro' }))
+    await user.click(tile(/Skills & Education/))
+    await user.click(tile(/Identity & Communications/))
+    await user.click(screen.getByRole('button', { name: 'Close Identity & Communications' }))
+    expect(region('Identity & Communications')).toBeNull()
+    expect(region('Skills & Education')).not.toHaveAttribute('inert')
+    expect(router.state.location.search).toBe('?screen=background')
+    await user.keyboard('{Escape}')
+    expect(region('Skills & Education')).toBeNull()
+    expect(router.state.location.search).toBe('')
+    expect(tile(/Skills & Education/)).toHaveFocus()
+  })
+
+  it('switches screens from the rail while one is open', async () => {
+    const user = userEvent.setup()
+    renderAt('/')
+    await user.click(screen.getByRole('button', { name: 'Skip intro' }))
+    await user.click(tile(/Skills & Education/))
+    const rail = screen.getByRole('navigation', { name: 'Switch screen' })
+    expect(within(rail).getByRole('button', { name: /Skills & Education/ })).toHaveAttribute('aria-current', 'true')
+    await user.click(within(rail).getByRole('button', { name: /Projects & Systems/ }))
+    expect(region('Projects & Systems')).not.toHaveAttribute('inert')
+    expect(region('Skills & Education')).toHaveAttribute('inert')
+  })
+
+  it('opens a screen directly from its link, skipping the boot', () => {
+    renderAt('/?screen=background')
+    expect(screen.getByRole('status')).toHaveTextContent(/System online/)
+    expect(region('Skills & Education')).toBeInTheDocument()
+  })
+
+  it('ignores an unknown screen id', () => {
+    renderAt('/?screen=nope')
+    expect(screen.getByRole('button', { name: 'Initialize lab' })).toBeInTheDocument()
+    for (const d of destinations) expect(region(d.title)).toBeNull()
+  })
+
+  it('browser Back moves to the previous screen, then closes it', async () => {
+    const user = userEvent.setup()
+    const router = renderAt('/')
+    await user.click(screen.getByRole('button', { name: 'Skip intro' }))
+    await user.click(tile(/Skills & Education/))
+    await user.click(tile(/Identity & Communications/))
+    await act(() => router.navigate(-1))
+    expect(region('Skills & Education')).not.toHaveAttribute('inert')
+    await act(() => router.navigate(-1))
+    for (const d of destinations) expect(region(d.title)).toBeNull()
   })
 })
 
