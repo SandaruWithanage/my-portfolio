@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { buildEnvironment } from '../../engineering-lab/scene/environment'
 import { detectQuality, maxPixelRatio } from '../../engineering-lab/scene/quality'
 import { lookAngles } from './look'
+import { monitorOn, monitorsSettleMs } from './sequence'
 
 export type BackdropOptions = {
   reducedMotion: boolean
@@ -61,13 +62,16 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
   edge.rotation.set(Math.PI / 2, 0, Math.PI / 2 - 1)
   edge.position.y = 0.07
   bench.add(top, edge)
-  const screenMat = track(new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.16, side: THREE.DoubleSide }))
-  const frameMat = track(new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.6 }))
+  // Each monitor has its own materials so they can power on one at a time.
   const screenGeo = track(new THREE.PlaneGeometry(1.1, 0.62))
   const frameGeo = track(new THREE.EdgesGeometry(screenGeo))
+  const monitors: { screen: THREE.MeshBasicMaterial; frame: THREE.LineBasicMaterial; level: number }[] = []
   for (const a of [-0.75, -0.28, 0.28, 0.75]) {
-    const s = new THREE.Mesh(screenGeo, screenMat)
-    s.add(new THREE.LineSegments(frameGeo, frameMat))
+    const screen = track(new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0, side: THREE.DoubleSide }))
+    const frame = track(new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0 }))
+    monitors.push({ screen, frame, level: 0 })
+    const s = new THREE.Mesh(screenGeo, screen)
+    s.add(new THREE.LineSegments(frameGeo, frame))
     s.position.set(Math.sin(a) * 2.9, 0.42, -Math.cos(a) * 2.9)
     s.lookAt(0, 0.42, 0)
     bench.add(s)
@@ -102,6 +106,8 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
   const yaw = { now: 0, goal: 0 }
   const pitch = { now: 0, goal: 0 }
   const exposure = { now: DORMANT_EXPOSURE, goal: DORMANT_EXPOSURE }
+  let online = false
+  let onlineAt = 0
   let paused = false
   let raf = 0
   let last = 0
@@ -128,13 +134,25 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
     pitch.now += (pitch.goal - pitch.now) * k
     exposure.now += (exposure.goal - exposure.now) * kLight
     renderer.toneMappingExposure = exposure.now
+    const elapsed = t - onlineAt
+    let monitorsMoving = false
+    monitors.forEach((m, i) => {
+      const goal = online && (instant || monitorOn(i, elapsed)) ? 1 : 0
+      m.level += (goal - m.level) * (instant ? 1 : 1 - Math.exp(-dt * 9))
+      if (Math.abs(goal - m.level) > 1e-3) monitorsMoving = true
+      // Dormant monitors keep a faint outline so the desk still reads.
+      m.screen.opacity = 0.02 + m.level * 0.16
+      m.frame.opacity = 0.12 + m.level * 0.5
+    })
     place()
     renderer.render(scene, camera)
     frames++
     const moving =
       Math.abs(yaw.goal - yaw.now) > 1e-4 ||
       Math.abs(pitch.goal - pitch.now) > 1e-4 ||
-      Math.abs(exposure.goal - exposure.now) > 1e-3
+      Math.abs(exposure.goal - exposure.now) > 1e-3 ||
+      monitorsMoving ||
+      (online && elapsed < monitorsSettleMs(monitors.length))
     if (moving) raf = requestAnimationFrame(step)
     else last = 0
   }
@@ -175,7 +193,9 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
       pitch.goal = a.pitch
       requestFrame()
     },
-    setOnline(online) {
+    setOnline(next) {
+      if (next && !online) onlineAt = performance.now()
+      online = next
       exposure.goal = online ? ONLINE_EXPOSURE : DORMANT_EXPOSURE
       requestFrame()
     },
