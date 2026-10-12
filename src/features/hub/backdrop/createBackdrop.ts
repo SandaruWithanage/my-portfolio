@@ -25,7 +25,8 @@ export type Backdrop = {
   /** Stop rendering while hidden behind an open screen. */
   setPaused: (paused: boolean) => void
   dispose: () => void
-  stats: () => { frames: number; quality: string }
+  /** Frames drawn so far and the mean CPU time of the last 60 draws (ms), for `?stats`. */
+  stats: () => { frames: number; quality: string; drawMs: number; paused: boolean }
 }
 
 const OBSIDIAN = 0x0a0d12
@@ -125,6 +126,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
   let last = 0
   let frames = 0
   let lastDraw = 0
+  const drawTimes = new Float32Array(60)
   let coreTime = 0
   const instant = opts.reducedMotion
   // The core turns only on the high tier with motion allowed; otherwise it holds a still pose.
@@ -166,14 +168,16 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
       Math.abs(pitch.goal - pitch.now) > 1e-4 ||
       Math.abs(exposure.goal - exposure.now) > 1e-3 ||
       monitorsMoving ||
-      (online && elapsed < monitorsSettleMs(monitors.length))
+      (!instant && online && elapsed < monitorsSettleMs(monitors.length))
     const ambient = spin && online
     if (ambient) coreTime += dt
     if (shouldDraw(transitioning, t - lastDraw)) {
       lastDraw = t
       core.update(coreTime)
       place()
+      const t0 = performance.now()
       renderer.render(scene, camera)
+      drawTimes[frames % drawTimes.length] = performance.now() - t0
       frames++
     }
     if (transitioning || ambient) raf = requestAnimationFrame(step)
@@ -238,7 +242,12 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
       last = 0
       requestFrame()
     },
-    stats: () => ({ frames, quality }),
+    stats: () => {
+      const n = Math.min(frames, drawTimes.length)
+      let sum = 0
+      for (let i = 0; i < n; i++) sum += drawTimes[i]
+      return { frames, quality, drawMs: n ? sum / n : 0, paused }
+    },
     dispose() {
       if (disposed) return
       disposed = true

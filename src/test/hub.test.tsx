@@ -207,6 +207,15 @@ describe('holographic screens', () => {
     expect(document.querySelector('.holo-window--exiting')).toBeNull()
   })
 
+  it('leaves no inline styles on the identity after its reveal, so it can fade behind screens', async () => {
+    const user = userEvent.setup()
+    renderAt('/')
+    await user.click(screen.getByRole('button', { name: 'Skip intro' }))
+    const identity = document.querySelector<HTMLElement>('.hub-identity')!
+    await waitFor(() => expect(identity.style.opacity).toBe(''), { timeout: 3000 })
+    expect(identity.style.transform).toBe('')
+  })
+
   it('opens a screen directly from its link, skipping the boot', () => {
     renderAt('/?screen=background')
     expect(screen.getByRole('status')).toHaveTextContent(/System online/)

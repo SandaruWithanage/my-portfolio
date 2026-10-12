@@ -109,9 +109,17 @@ export function HubPage() {
     }
     if (reduced) return
     const scope = createScope({ root }).add(() => {
-      // Identity settles first, then the destinations assemble around it.
-      createTimeline()
-        .add(root.querySelector('.hub-identity')!, { opacity: [0.55, 1], scale: [0.97, 1], duration: 380, ease: 'outQuad' })
+      // Identity settles first, then the destinations assemble around it. The identity's
+      // inline styles are cleared afterwards so CSS (e.g. fading it behind an open
+      // screen) stays in control.
+      const identity = root.querySelector<HTMLElement>('.hub-identity')!
+      createTimeline({
+        onComplete: () => {
+          identity.style.removeProperty('opacity')
+          identity.style.removeProperty('transform')
+        },
+      })
+        .add(identity, { opacity: [0.55, 1], scale: [0.97, 1], duration: 380, ease: 'outQuad' })
         .add(root.querySelectorAll('.holo-panel'), { opacity: [0, 1], translateY: [14, 0], duration: 420, delay: stagger(90), ease: 'outQuad' }, '-=200')
     })
     return () => scope.revert()

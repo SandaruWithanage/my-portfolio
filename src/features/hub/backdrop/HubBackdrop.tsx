@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { isWebGLAvailable } from '../../engineering-lab/support'
 import type { LookSource } from '../lookSource'
 import type { Backdrop } from './createBackdrop'
 import { FOCUS_SETTLE_MS } from './look'
+import { StatsOverlay } from './StatsOverlay'
 
 type Props = {
   online: boolean
@@ -85,6 +86,14 @@ export function HubBackdrop({ online, paused, focus, look, reducedMotion }: Prop
 
   useEffect(() => look.subscribe(({ x, y }) => backdrop.current?.look(x, y)), [look])
 
+  const [showStats] = useState(() => new URLSearchParams(window.location.search).has('stats'))
+  const getBackdrop = useCallback(() => backdrop.current, [])
+
   if (!available) return null
-  return <canvas ref={canvasRef} className="hub-backdrop" aria-hidden="true" />
+  return (
+    <>
+      <canvas ref={canvasRef} className="hub-backdrop" aria-hidden="true" />
+      {showStats && <StatsOverlay get={getBackdrop} />}
+    </>
+  )
 }

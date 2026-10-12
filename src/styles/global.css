@@ -144,7 +144,7 @@ main:focus { outline: none; }
 /* 3D room behind the hub (absent without WebGL: the gradient above shows instead). */
 .hub-backdrop { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .hub-vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 75% 65% at 50% 42%, transparent 35%, rgba(5, 8, 12, 0.7) 100%), linear-gradient(rgba(5, 8, 12, 0.35), transparent 30%, transparent 70%, rgba(5, 8, 12, 0.55)); }
-.hub > :not(.hub-backdrop):not(.hub-vignette):not(.holo-layer) { position: relative; }
+.hub > :not(.hub-backdrop):not(.hub-vignette):not(.holo-layer):not(.hub-stats) { position: relative; }
 .hub-frame { position: absolute; inset: clamp(0.5rem, 2vw, 1.25rem); pointer-events: none; }
 .hub-corner { position: absolute; width: 28px; height: 28px; border-color: rgba(54, 191, 250, 0.55); border-style: solid; border-width: 0; }
 .hub-corner--tl { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; }
@@ -281,3 +281,4 @@ main:focus { outline: none; }
   .hub-destinations ul { grid-template-columns: 1fr; }
 }
 .holo-window--exiting { pointer-events: none; }
+.hub-stats { position: fixed; left: 0.75rem; bottom: 0.75rem; z-index: 200; padding: 0.35rem 0.6rem; border-radius: 6px; font: 0.75rem var(--mono); color: var(--ice); background: rgba(0, 0, 0, 0.75); pointer-events: none; }
