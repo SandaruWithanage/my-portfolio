@@ -23,6 +23,15 @@ type Props = {
 const LAB_MODEL_URL: string | null = null
 
 /**
+ * Optional lab photograph. When this file exists in /public the hub uses it as its
+ * backdrop (with parallax and a slow drift, all in CSS) and skips WebGL entirely;
+ * otherwise the procedural 3D room is used.
+ */
+const LAB_PHOTO_URL = `${import.meta.env.BASE_URL}hub/lab-background.webp`
+
+type Mode = 'probing' | 'photo' | 'scene'
+
+/**
  * The 3D room behind the hub. Decorative and optional: without WebGL, or if the
  * context is lost, nothing renders and the hub's CSS background shows instead.
  * Three.js is loaded lazily so the hub's first paint never waits for it.
@@ -30,7 +39,19 @@ const LAB_MODEL_URL: string | null = null
 export function HubBackdrop({ online, paused, focus, look, reducedMotion }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const backdrop = useRef<Backdrop | null>(null)
-  const [available, setAvailable] = useState(() => isWebGLAvailable())
+  const [mode, setMode] = useState<Mode>('probing')
+  useEffect(() => {
+    let live = true
+    const img = new Image()
+    img.onload = () => live && setMode('photo')
+    img.onerror = () => live && setMode('scene')
+    img.src = LAB_PHOTO_URL
+    return () => {
+      live = false
+    }
+  }, [])
+  const [webgl, setAvailable] = useState(() => isWebGLAvailable())
+  const available = mode === 'scene' && webgl
   const latest = useRef({ online, paused, focus })
   useEffect(() => {
     latest.current = { online, paused, focus }
@@ -89,6 +110,12 @@ export function HubBackdrop({ online, paused, focus, look, reducedMotion }: Prop
   const [showStats] = useState(() => new URLSearchParams(window.location.search).has('stats'))
   const getBackdrop = useCallback(() => backdrop.current, [])
 
+  if (mode === 'photo')
+    return (
+      <div className="hub-photo" aria-hidden="true">
+        <div className="hub-photo-img" style={{ backgroundImage: `url(${LAB_PHOTO_URL})` }} />
+      </div>
+    )
   if (!available) return null
   return (
     <>

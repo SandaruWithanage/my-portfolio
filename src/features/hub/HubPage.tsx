@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Pointer
 import { useDocumentTitle } from '../../app/useDocumentTitle'
 import { usePrefersReducedMotion } from '../../components/motion/usePrefersReducedMotion'
 import { profile } from '../../data/profile'
+import { projects } from '../../data/projects'
 import { readBooted, writeBooted } from './bootState'
 import { BackgroundPage } from '../../pages/BackgroundPage'
 import { ContactPage } from '../../pages/ContactPage'
@@ -148,18 +149,38 @@ export function HubPage() {
         <span className="hub-corner hub-corner--bl" />
         <span className="hub-corner hub-corner--br" />
       </div>
-      <header className="hub-top">
-        <span className="hub-status" role="status">
-          Engineering lab / {phase === 'online' ? 'System online' : phase === 'booting' ? 'Initializing' : 'Standby'}
+      <header className="hub-top hud-bar">
+        <span className="hud-bar-group">
+          <span className={`hud-dot${phase === 'online' ? ' hud-dot--live' : ''}`} aria-hidden="true" />
+          <span className="hub-status" role="status">
+            Engineering lab / {phase === 'online' ? 'System online' : phase === 'booting' ? 'Initializing' : 'Standby'}
+          </span>
+        </span>
+        <span className="hud-bar-group hud-bar-meta">
+          EduVerse <span aria-hidden="true">·</span> {projects[0].status}
         </span>
       </header>
 
       <main id="hub-main" className="hub-main" tabIndex={-1}>
-        <section className="hub-identity holo-frame" aria-labelledby="hub-name">
-          <p className="eyebrow">Engineer identification</p>
+        <section className="hub-identity hud-panel" aria-labelledby="hub-name">
+          <span className="hud-scanline" aria-hidden="true" />
+          <p className="hud-badge">
+            <span className="hud-dot" aria-hidden="true" />
+            {phase === 'online' ? 'System online' : 'Engineer identification'}
+          </p>
+          <svg className="hud-emblem" viewBox="0 0 48 48" fill="none" stroke="var(--holo)" strokeWidth="1.8" aria-hidden="true">
+            <polygon points="24,3 43,14 43,34 24,45 5,34 5,14" strokeWidth="2" />
+            <polygon points="24,14 34,20 24,26 14,20" fill="rgba(56,225,255,0.2)" />
+            <polygon points="14,20 24,26 24,36 14,30" fill="rgba(56,225,255,0.1)" />
+            <polygon points="34,20 24,26 24,36 34,30" fill="rgba(56,225,255,0.15)" />
+          </svg>
           <h1 id="hub-name">{profile.name}</h1>
           <p className="hub-role">{profile.role}</p>
           <p className="hub-statement">{profile.summary}</p>
+          <p className="hud-ticks" aria-hidden="true">
+            <span>Base: {profile.location}</span>
+            <span>Node: {phase === 'online' ? 'active' : 'standby'}</span>
+          </p>
         </section>
 
         {phase === 'dormant' && (
@@ -204,7 +225,7 @@ export function HubPage() {
                 <li key={d.id} className={`holo-panel holo-panel--${d.id}`}>
                   <button
                     type="button"
-                    className="holo-link holo-frame"
+                    className="holo-link hud-panel"
                     aria-expanded={screens.stack.includes(d.id)}
                     onClick={() => screens.open(d.id)}
                     ref={(el) => {
@@ -212,10 +233,19 @@ export function HubPage() {
                       else tiles.current.delete(d.id)
                     }}
                   >
-                    <span className="holo-code" aria-hidden="true">{d.code}</span>
-                    <span className="holo-title">{d.title}</span>
+                    <span className="holo-head">
+                      <span className="holo-code" aria-hidden="true">{d.code.slice(-2)}</span>
+                      <span className="holo-title">{d.title}</span>
+                    </span>
                     <span className="holo-summary">{d.summary}</span>
-                    <HoloDiagram id={d.id} />
+                    <span className="holo-foot">
+                      <HoloDiagram id={d.id} />
+                      <span className="holo-go" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 5l7 7-7 7" />
+                        </svg>
+                      </span>
+                    </span>
                   </button>
                 </li>
               ))}
@@ -223,6 +253,15 @@ export function HubPage() {
           </nav>
         )}
       </main>
+
+      <footer className="hud-footer">
+        <span>
+          Interface <span aria-hidden="true">/</span> {phase === 'online' ? 'synchronised' : phase === 'booting' ? 'initialising' : 'standby'}
+        </span>
+        <span>
+          © {new Date().getFullYear()} {profile.name}
+        </span>
+      </footer>
 
       {phase === 'online' && (
         <HoloScreens
