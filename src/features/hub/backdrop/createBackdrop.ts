@@ -54,7 +54,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
   const environment = buildEnvironment(scene, quality, { emblem: false })
   const workshop = buildWorkshop(scene, renderer, quality)
   // Centerpiece: EduVerse's architecture on the pedestal (pedestal top is at y 0.3).
-  const core = buildCore(scene, graphNodes, new THREE.Vector3(0, 0.3, PEDESTAL_Z))
+  const core = buildCore(scene, graphNodes, new THREE.Vector3(0, 0.3, PEDESTAL_Z), { particles: quality === 'high' })
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80)
 
   const disposables: { dispose: () => void }[] = []

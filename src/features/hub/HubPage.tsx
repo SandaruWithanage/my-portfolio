@@ -110,18 +110,28 @@ export function HubPage() {
     }
     if (reduced) return
     const scope = createScope({ root }).add(() => {
-      // Identity settles first, then the destinations assemble around it. The identity's
-      // inline styles are cleared afterwards so CSS (e.g. fading it behind an open
-      // screen) stays in control.
-      const identity = root.querySelector<HTMLElement>('.hub-identity')!
+      // Boot choreography: header slides down, the identity console scales in, the
+      // destinations cascade in, then the footer. Buttons are animated (not their
+      // tilted <li>) so the CSS tilt is never overridden, and every inline style is
+      // cleared at the end so CSS (hover, fading behind screens) stays in control.
+      const header = root.querySelector<HTMLElement>('.hud-bar')
+      const identity = root.querySelector<HTMLElement>('.hub-identity')
+      const tilesEls = [...root.querySelectorAll<HTMLElement>('.holo-link')]
+      const footer = root.querySelector<HTMLElement>('.hud-footer')
+      const animated = [header, identity, ...tilesEls, footer].filter((el): el is HTMLElement => !!el)
       createTimeline({
+        defaults: { ease: 'outCubic' },
         onComplete: () => {
-          identity.style.removeProperty('opacity')
-          identity.style.removeProperty('transform')
+          for (const el of animated) {
+            el.style.removeProperty('opacity')
+            el.style.removeProperty('transform')
+          }
         },
       })
-        .add(identity, { opacity: [0.55, 1], scale: [0.97, 1], duration: 380, ease: 'outQuad' })
-        .add(root.querySelectorAll('.holo-panel'), { opacity: [0, 1], translateY: [14, 0], duration: 420, delay: stagger(90), ease: 'outQuad' }, '-=200')
+        .add(header ?? [], { translateY: [-25, 0], opacity: [0, 1], duration: 500 })
+        .add(identity ?? [], { scale: [0.92, 1], opacity: [0, 1], duration: 600, ease: 'outBack' }, '-=250')
+        .add(tilesEls, { translateY: [28, 0], opacity: [0, 1], delay: stagger(120), duration: 650, ease: 'outQuad' }, '-=350')
+        .add(footer ?? [], { translateY: [15, 0], opacity: [0, 1], duration: 400 }, '-=300')
     })
     return () => scope.revert()
   }, [phase, reduced])

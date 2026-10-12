@@ -23,7 +23,12 @@ export function coreTiers(nodes: Pick<GraphNode, 'id' | 'kind'>[]): CoreTier[] {
  * pedestal. Each tier is a ring with one block per system component, joined by a
  * spine. `update(t)` turns the tiers; the caller decides whether it runs.
  */
-export function buildCore(scene: THREE.Scene, nodes: Pick<GraphNode, 'id' | 'kind'>[], center: THREE.Vector3) {
+export function buildCore(
+  scene: THREE.Scene,
+  nodes: Pick<GraphNode, 'id' | 'kind'>[],
+  center: THREE.Vector3,
+  { particles: withParticles = true } = {},
+) {
   const disposables: { dispose: () => void }[] = []
   const track = <T extends { dispose: () => void }>(o: T): T => (disposables.push(o), o)
   const root = new THREE.Group()
@@ -63,14 +68,76 @@ export function buildCore(scene: THREE.Scene, nodes: Pick<GraphNode, 'id' | 'kin
   spine.position.y = (TIER_Y[0] + TIER_Y[3]) / 2
   root.add(spine)
 
+  // Turbine housing around the tiers: wireframe cage, counter-rotating rotor, a
+  // central amber coil and a pulsing energy core at the top of the spine.
+  const wire = (color: number, opacity: number) =>
+    track(new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity }))
+  const cage = new THREE.Mesh(track(new THREE.CylinderGeometry(1.95, 1.95, 2.1, 24, 5, true)), wire(0x00f0ff, 0.22))
+  cage.position.y = 1.15
+  const rotor = new THREE.Mesh(track(new THREE.CylinderGeometry(0.42, 0.42, 1.9, 12, 3, true)), wire(0x4f86ff, 0.45))
+  rotor.position.y = 1.15
+  const coil = new THREE.Mesh(track(new THREE.TorusGeometry(1.75, 0.03, 8, 48)), wire(AMBER, 0.9))
+  coil.rotation.x = Math.PI / 2
+  coil.position.y = 1.1
+  const energy = new THREE.Mesh(track(new THREE.IcosahedronGeometry(0.22, 1)), wire(0xffffff, 0.85))
+  energy.position.y = TIER_Y[3] + 0.35
+  root.add(cage, rotor, coil, energy)
+
+  // Projection table on the floor: concentric rings and a segmented targeting ring.
+  const table = new THREE.Group()
+  table.position.y = -0.28
+  for (let r = 2.7; r <= 4.8; r += 0.7) {
+    const ring = new THREE.Mesh(
+      track(new THREE.RingGeometry(r - 0.02, r + 0.02, 96)),
+      track(new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.18 + (4.8 - r) * 0.08, side: THREE.DoubleSide })),
+    )
+    ring.rotation.x = -Math.PI / 2
+    table.add(ring)
+  }
+  const target = new THREE.Mesh(
+    track(new THREE.RingGeometry(5.1, 5.18, 64, 1, 0, Math.PI * 1.85)),
+    track(new THREE.MeshBasicMaterial({ color: 0x55ddf5, transparent: true, opacity: 0.45, side: THREE.DoubleSide })),
+  )
+  target.rotation.x = -Math.PI / 2
+  table.add(target)
+  root.add(table)
+
+  // Ambient data particles around the core (high tier only: the caller decides).
+  let field: THREE.Points | null = null
+  if (withParticles) {
+    const count = 320
+    const pos = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      // Deterministic spread (golden-angle spiral) so every visit looks the same.
+      const a = i * 2.39996
+      const rr = 2.2 + ((i * 7919) % 1000) / 1000 * 7
+      pos[i * 3] = Math.cos(a) * rr
+      pos[i * 3 + 1] = (((i * 104729) % 1000) / 1000) * 6.5
+      pos[i * 3 + 2] = Math.sin(a) * rr
+    }
+    const geo = track(new THREE.BufferGeometry())
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+    field = new THREE.Points(
+      geo,
+      track(new THREE.PointsMaterial({ color: 0x00e5ff, size: 0.05, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false })),
+    )
+    root.add(field)
+  }
+
   scene.add(root)
 
   return {
-    /** Pose the tiers for time `t` in seconds. */
+    /** Pose the mechanism for time `t` in seconds. */
     update(t: number) {
       tiers.forEach((tier, i) => {
         tier.rotation.y = t * CORE_SPEED * (i % 2 ? -1 : 1)
       })
+      cage.rotation.y = t * 0.3
+      rotor.rotation.y = -t * 0.6
+      energy.rotation.set(t * 0.8, 0, t * 0.5)
+      energy.scale.setScalar(1 + Math.sin(t * 3) * 0.04)
+      target.rotation.z = t * 0.15
+      if (field) field.rotation.y = t * 0.02
     },
     dispose() {
       scene.remove(root)

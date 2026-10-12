@@ -312,7 +312,9 @@ main:focus { outline: none; }
 
 /* Tiles */
 .holo-link.hud-panel { display: flex; flex-direction: column; gap: 0.25rem; padding: 1.25rem 1.4rem; color: var(--ice); }
-.holo-link.hud-panel:hover { border-color: rgba(94, 234, 255, 0.95); box-shadow: inset 0 0 25px rgba(0, 229, 255, 0.22); transform: translateY(-2px); }
+.holo-link.hud-panel:hover { border-color: rgba(94, 234, 255, 0.95); box-shadow: inset 0 0 25px rgba(0, 229, 255, 0.22); transform: scale(1.025); }
+.holo-go svg { transition: transform 200ms cubic-bezier(.2, .8, .2, 1); }
+.holo-link:hover .holo-go svg, .holo-link:focus-visible .holo-go svg { transform: translateX(4px); }
 .holo-link[aria-expanded='true'] { border-color: var(--amber); }
 .holo-head { display: flex; align-items: baseline; gap: 0.75rem; }
 .holo-link .holo-code { font: 700 1.25rem var(--hud-mono); letter-spacing: 0.08em; color: var(--holo); }
@@ -368,6 +370,7 @@ main:focus { outline: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .holo-link .holo-diagram, .hud-emblem, .hud-scanline, .hud-dot--live::after, .hub-photo-img { animation: none; }
+  .holo-link.hud-panel:hover, .holo-link:hover .holo-go svg { transform: none; }
   .hub-photo { transform: none; }
 }
 @media (max-width: 640px) {
