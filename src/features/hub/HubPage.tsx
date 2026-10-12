@@ -10,6 +10,7 @@ import { EngineeringPage } from '../../pages/EngineeringPage'
 import { ProjectsPage } from '../../pages/ProjectsPage'
 import { destinations } from './destinations'
 import { HubBackdrop } from './backdrop/HubBackdrop'
+import { HoloDiagram } from './HoloDiagram'
 import { HoloScreens } from './HoloScreens'
 import { useScreenStack } from './useScreenStack'
 
@@ -126,7 +127,7 @@ export function HubPage() {
       </header>
 
       <main id="hub-main" className="hub-main" tabIndex={-1}>
-        <section className="hub-identity" aria-labelledby="hub-name">
+        <section className="hub-identity holo-frame" aria-labelledby="hub-name">
           <p className="eyebrow">Engineer identification</p>
           <h1 id="hub-name">{profile.name}</h1>
           <p className="hub-role">{profile.role}</p>
@@ -175,7 +176,7 @@ export function HubPage() {
                 <li key={d.id} className={`holo-panel holo-panel--${d.id}`}>
                   <button
                     type="button"
-                    className="holo-link"
+                    className="holo-link holo-frame"
                     aria-expanded={screens.stack.includes(d.id)}
                     onClick={() => screens.open(d.id)}
                     ref={(el) => {
@@ -186,6 +187,7 @@ export function HubPage() {
                     <span className="holo-code" aria-hidden="true">{d.code}</span>
                     <span className="holo-title">{d.title}</span>
                     <span className="holo-summary">{d.summary}</span>
+                    <HoloDiagram id={d.id} />
                   </button>
                 </li>
               ))}

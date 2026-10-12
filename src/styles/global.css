@@ -191,6 +191,51 @@ main:focus { outline: none; }
   .holo-panel:nth-child(odd) { transform: rotateY(18deg); transform-origin: right center; }
   .holo-panel:nth-child(even) { transform: rotateY(-18deg); transform-origin: left center; }
 }
+/* Corner brackets for holographic surfaces (drawn as background, so no extra markup). */
+.holo-frame { --bracket: rgba(54, 191, 250, 0.85); --bl: 14px; }
+.holo-frame { background-image:
+    linear-gradient(var(--bracket), var(--bracket)), linear-gradient(var(--bracket), var(--bracket)),
+    linear-gradient(var(--bracket), var(--bracket)), linear-gradient(var(--bracket), var(--bracket)),
+    linear-gradient(var(--bracket), var(--bracket)), linear-gradient(var(--bracket), var(--bracket)),
+    linear-gradient(var(--bracket), var(--bracket)), linear-gradient(var(--bracket), var(--bracket)),
+    linear-gradient(150deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(54, 191, 250, 0.08));
+  background-size: var(--bl) 2px, 2px var(--bl), var(--bl) 2px, 2px var(--bl), var(--bl) 2px, 2px var(--bl), var(--bl) 2px, 2px var(--bl), auto;
+  background-position: 6px 6px, 6px 6px, calc(100% - 6px) 6px, calc(100% - 6px) 6px, 6px calc(100% - 6px), 6px calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), 0 0;
+  background-repeat: no-repeat; }
+.holo-link[aria-expanded='true'] { --bracket: var(--amber); }
+
+/* Tile diagrams */
+.holo-link { grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem; }
+.holo-link > .holo-code, .holo-link > .holo-title, .holo-link > .holo-summary { grid-column: 1; }
+.holo-diagram { grid-column: 2; grid-row: 1 / span 3; align-self: center; width: 88px; height: auto; color: rgba(54, 191, 250, 0.75); }
+.holo-diagram-accent { stroke: var(--amber); }
+.holo-link:hover .holo-diagram, .holo-link:focus-visible .holo-diagram { color: var(--cyan); }
+
+/* Identity as the central glass panel */
+.hub-identity { padding: 1.5rem 1.75rem; border-radius: 22px; border: 1px solid rgba(54, 191, 250, 0.35);
+  background-color: rgba(8, 13, 20, 0.55); -webkit-backdrop-filter: blur(14px) saturate(160%); backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 40px rgba(54, 191, 250, 0.08), 0 0 50px rgba(54, 191, 250, 0.14); }
+.hub-identity .hub-statement { margin-bottom: 0; }
+
+/* Command-centre composition: identity in the centre, destinations around it at two depths. */
+@media (min-width: 1100px) {
+  .hub-main { max-width: 1360px; grid-template-columns: minmax(0, 1fr) minmax(440px, 540px) minmax(0, 1fr); align-items: start; column-gap: 2rem; }
+  .hub-identity { grid-column: 2; grid-row: 1; }
+  .hub-controls, .hub-boot { grid-column: 2; grid-row: 2; }
+  .hub-destinations { grid-column: 1 / -1; grid-row: 1 / span 2; pointer-events: none; }
+  .hub-destinations > h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .hub-destinations ul.holo-field { grid-template-columns: minmax(0, 1fr) minmax(440px, 540px) minmax(0, 1fr); column-gap: 2rem; row-gap: 2.5rem; }
+  .holo-panel { pointer-events: auto; }
+  .holo-panel:nth-child(odd) { grid-column: 1; }
+  .holo-panel:nth-child(even) { grid-column: 3; }
+  .holo-panel:nth-child(-n + 2) { grid-row: 1; margin-top: 0.5rem; }
+  .holo-panel:nth-child(n + 3) { grid-row: 2; }
+  .holo-panel:nth-child(1) { transform: rotateY(16deg); transform-origin: right center; }
+  .holo-panel:nth-child(2) { transform: rotateY(-16deg); transform-origin: left center; }
+  .holo-panel:nth-child(3) { transform: translateZ(-70px) rotateY(22deg); transform-origin: right center; }
+  .holo-panel:nth-child(4) { transform: translateZ(-70px) rotateY(-22deg); transform-origin: left center; }
+}
+
 .hub--screen-open .hub-destinations, .hub--screen-open .hub-identity, .hub--screen-open .hub-top { opacity: 0.08; filter: blur(3px); }
 .hub-identity, .hub-top, .hub-destinations { transition: opacity 400ms, filter 400ms; }
 
@@ -225,6 +270,8 @@ main:focus { outline: none; }
 }
 @media (max-width: 640px) {
   .hub-controls { grid-auto-flow: row; }
+  /* Small screens: denser glass so the room never competes with text. */
+  .holo-link, .hub-identity { background-color: rgba(8, 13, 20, 0.8); }
   .holo-layer { --pad: 0px; }
   .holo-window:not([data-depth='0']) { visibility: hidden; }
   .holo-window-bar .holo-code { display: none; }
