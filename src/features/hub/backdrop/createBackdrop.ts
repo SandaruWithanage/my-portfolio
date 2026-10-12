@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { buildEnvironment } from '../../engineering-lab/scene/environment'
 import { detectQuality, maxPixelRatio } from '../../engineering-lab/scene/quality'
-import { lookAngles } from './look'
+import { FOCUS_YAW, lookAngles } from './look'
 import { graphNodes } from '../../../data/eduverse-graph'
 import { PEDESTAL_Z } from '../../engineering-lab/scene/environment'
 import { buildCore } from './core'
@@ -18,6 +18,8 @@ export type BackdropOptions = {
 export type Backdrop = {
   /** Pointer position in [-0.5, 0.5]; the camera eases toward it. */
   look: (x: number, y: number) => void
+  /** Turn toward a destination's side of the room (-1 left, 1 right, 0 centre). */
+  focus: (side: number) => void
   /** Dormant (dim) or online (lit); the change fades in unless motion is reduced. */
   setOnline: (online: boolean) => void
   /** Stop rendering while hidden behind an open screen. */
@@ -111,6 +113,9 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
 
   // State the loop eases toward.
   const yaw = { now: 0, goal: 0 }
+  // The camera's yaw goal is the pointer's look plus any destination focus.
+  let lookYaw = 0
+  let focusYaw = 0
   const pitch = { now: 0, goal: 0 }
   const exposure = { now: DORMANT_EXPOSURE, goal: DORMANT_EXPOSURE }
   let online = false
@@ -207,8 +212,15 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
     look(x, y) {
       if (instant) return
       const a = lookAngles(x, y)
-      yaw.goal = a.yaw
+      lookYaw = a.yaw
+      yaw.goal = lookYaw + focusYaw
       pitch.goal = a.pitch
+      requestFrame()
+    },
+    focus(side) {
+      if (instant) return
+      focusYaw = -Math.sign(side) * FOCUS_YAW
+      yaw.goal = lookYaw + focusYaw
       requestFrame()
     },
     setOnline(next) {

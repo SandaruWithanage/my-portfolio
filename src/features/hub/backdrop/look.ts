@@ -8,3 +8,8 @@ const clamp = (v: number) => Math.max(-0.5, Math.min(0.5, v))
 export function lookAngles(x: number, y: number): { yaw: number; pitch: number } {
   return { yaw: -clamp(x) * 2 * MAX_YAW, pitch: -clamp(y) * 2 * MAX_PITCH }
 }
+
+/** Extra camera turn toward the side of a destination as its screen opens. */
+export const FOCUS_YAW = 0.12
+/** How long the room keeps rendering after a screen opens, so the turn can settle before it pauses. */
+export const FOCUS_SETTLE_MS = 650

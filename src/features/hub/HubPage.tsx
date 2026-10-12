@@ -1,5 +1,5 @@
 import { createScope, createTimeline, stagger } from 'animejs'
-import { useCallback, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { useDocumentTitle } from '../../app/useDocumentTitle'
 import { usePrefersReducedMotion } from '../../components/motion/usePrefersReducedMotion'
 import { profile } from '../../data/profile'
@@ -12,6 +12,7 @@ import { destinations } from './destinations'
 import { HubBackdrop } from './backdrop/HubBackdrop'
 import { HoloDiagram } from './HoloDiagram'
 import { HoloScreens } from './HoloScreens'
+import { createLookSource } from './lookSource'
 import { useScreenStack } from './useScreenStack'
 
 type Phase = 'dormant' | 'booting' | 'online'
@@ -54,17 +55,28 @@ export function HubPage() {
     if (wasLast) tiles.current.get(id)?.focus({ preventScroll: true })
   }
 
-  // Mouse look: the screen field tilts gently toward the pointer (CSS variables, no re-render).
-  const look = (e: PointerEvent<HTMLDivElement>) => {
-    if (reduced || e.pointerType !== 'mouse') return
-    const root = rootRef.current
-    if (!root) return
-    root.style.setProperty('--look-x', ((e.clientX / window.innerWidth) - 0.5).toFixed(3))
-    root.style.setProperty('--look-y', ((e.clientY / window.innerHeight) - 0.5).toFixed(3))
-  }
   const rootRef = useRef<HTMLDivElement>(null)
   const destRef = useRef<HTMLElement>(null)
   const focusDest = useRef(false)
+
+  // Mouse look: one pointer reading drives both the tile tilt (CSS variables, no
+  // re-render) and the 3D camera, so they move together.
+  const [lookSource] = useState(createLookSource)
+  useEffect(
+    () =>
+      lookSource.subscribe(({ x, y }) => {
+        rootRef.current?.style.setProperty('--look-x', x.toFixed(3))
+        rootRef.current?.style.setProperty('--look-y', y.toFixed(3))
+      }),
+    [lookSource],
+  )
+  const look = (e: PointerEvent<HTMLDivElement>) => {
+    if (reduced || e.pointerType !== 'mouse') return
+    lookSource.set({ x: e.clientX / window.innerWidth - 0.5, y: e.clientY / window.innerHeight - 0.5 })
+  }
+  // Left-column destinations turn the camera left, right-column ones right.
+  const frontIndex = destinations.findIndex((d) => d.id === screens.front)
+  const focusSide = frontIndex < 0 ? 0 : frontIndex % 2 === 0 ? -1 : 1
 
   const goOnline = () => {
     writeBooted()
@@ -97,8 +109,10 @@ export function HubPage() {
     }
     if (reduced) return
     const scope = createScope({ root }).add(() => {
+      // Identity settles first, then the destinations assemble around it.
       createTimeline()
-        .add(root.querySelectorAll('.holo-panel'), { opacity: [0, 1], translateY: [14, 0], duration: 420, delay: stagger(90), ease: 'outQuad' })
+        .add(root.querySelector('.hub-identity')!, { opacity: [0.55, 1], scale: [0.97, 1], duration: 380, ease: 'outQuad' })
+        .add(root.querySelectorAll('.holo-panel'), { opacity: [0, 1], translateY: [14, 0], duration: 420, delay: stagger(90), ease: 'outQuad' }, '-=200')
     })
     return () => scope.revert()
   }, [phase, reduced])
@@ -109,7 +123,13 @@ export function HubPage() {
       ref={rootRef}
       onPointerMove={look}
     >
-      <HubBackdrop online={phase !== 'dormant'} paused={screens.stack.length > 0} reducedMotion={reduced} />
+      <HubBackdrop
+        online={phase !== 'dormant'}
+        paused={screens.stack.length > 0}
+        focus={focusSide}
+        look={lookSource}
+        reducedMotion={reduced}
+      />
       <div className="hub-vignette" aria-hidden="true" />
       <a className="skip-link" href="#hub-main">
         Skip to content

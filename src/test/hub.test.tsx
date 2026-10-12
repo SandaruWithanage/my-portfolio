@@ -181,6 +181,32 @@ describe('holographic screens', () => {
     expect(region('Skills & Education')).toHaveAttribute('inert')
   })
 
+  it('closing updates state at once; the exit animation is an inert copy that then goes away', async () => {
+    const user = userEvent.setup()
+    const router = renderAt('/')
+    await user.click(screen.getByRole('button', { name: 'Skip intro' }))
+    await user.click(tile(/Skills & Education/))
+    await user.click(screen.getByRole('button', { name: 'Close Skills & Education' }))
+    expect(router.state.location.search).toBe('')
+    expect(region('Skills & Education')).toBeNull()
+    const copy = document.querySelector('.holo-window--exiting')
+    expect(copy).toHaveAttribute('aria-hidden', 'true')
+    await waitFor(() => expect(document.querySelector('.holo-window--exiting')).toBeNull(), { timeout: 2000 })
+  })
+
+  it('reopening a screen mid-exit cancels the exit and keeps it open', async () => {
+    const user = userEvent.setup()
+    renderAt('/')
+    await user.click(screen.getByRole('button', { name: 'Skip intro' }))
+    await user.click(tile(/Skills & Education/))
+    await user.click(screen.getByRole('button', { name: 'Close Skills & Education' }))
+    await user.click(tile(/Skills & Education/))
+    expect(region('Skills & Education')).not.toHaveAttribute('inert')
+    await new Promise((r) => setTimeout(r, 600))
+    expect(region('Skills & Education')).toBeInTheDocument()
+    expect(document.querySelector('.holo-window--exiting')).toBeNull()
+  })
+
   it('opens a screen directly from its link, skipping the boot', () => {
     renderAt('/?screen=background')
     expect(screen.getByRole('status')).toHaveTextContent(/System online/)
