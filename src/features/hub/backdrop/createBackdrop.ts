@@ -3,6 +3,7 @@ import { buildEnvironment } from '../../engineering-lab/scene/environment'
 import { detectQuality, maxPixelRatio } from '../../engineering-lab/scene/quality'
 import { lookAngles } from './look'
 import { monitorOn, monitorsSettleMs } from './sequence'
+import { buildWorkshop } from './workshop'
 
 export type BackdropOptions = {
   reducedMotion: boolean
@@ -45,6 +46,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
 
   const scene = new THREE.Scene()
   const environment = buildEnvironment(scene, quality)
+  const workshop = buildWorkshop(scene, renderer, quality)
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80)
 
   const disposables: { dispose: () => void }[] = []
@@ -216,6 +218,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
       ro.disconnect()
       canvas.removeEventListener('webglcontextlost', onContextLost)
       document.removeEventListener('visibilitychange', onVisibility)
+      workshop.dispose()
       environment.dispose()
       for (const d of disposables) d.dispose()
       renderer.dispose()
