@@ -9,6 +9,7 @@ import { ContactPage } from '../../pages/ContactPage'
 import { EngineeringPage } from '../../pages/EngineeringPage'
 import { ProjectsPage } from '../../pages/ProjectsPage'
 import { destinations } from './destinations'
+import { HubBackdrop } from './backdrop/HubBackdrop'
 import { HoloScreens } from './HoloScreens'
 import { useScreenStack } from './useScreenStack'
 
@@ -107,6 +108,8 @@ export function HubPage() {
       ref={rootRef}
       onPointerMove={look}
     >
+      <HubBackdrop online={phase !== 'dormant'} paused={screens.stack.length > 0} reducedMotion={reduced} />
+      <div className="hub-vignette" aria-hidden="true" />
       <a className="skip-link" href="#hub-main">
         Skip to content
       </a>

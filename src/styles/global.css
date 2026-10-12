@@ -141,6 +141,10 @@ main:focus { outline: none; }
     linear-gradient(90deg, rgba(54, 191, 250, 0.05) 1px, transparent 1px) 0 0 / 40px 100%,
     var(--obsidian); }
 .hub--dormant { background-color: #07090c; }
+/* 3D room behind the hub (absent without WebGL: the gradient above shows instead). */
+.hub-backdrop { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.hub-vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 75% 65% at 50% 42%, transparent 35%, rgba(5, 8, 12, 0.7) 100%), linear-gradient(rgba(5, 8, 12, 0.35), transparent 30%, transparent 70%, rgba(5, 8, 12, 0.55)); }
+.hub > :not(.hub-backdrop):not(.hub-vignette):not(.holo-layer) { position: relative; }
 .hub-frame { position: absolute; inset: clamp(0.5rem, 2vw, 1.25rem); pointer-events: none; }
 .hub-corner { position: absolute; width: 28px; height: 28px; border-color: rgba(54, 191, 250, 0.55); border-style: solid; border-width: 0; }
 .hub-corner--tl { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; }
@@ -187,8 +191,8 @@ main:focus { outline: none; }
   .holo-panel:nth-child(odd) { transform: rotateY(18deg); transform-origin: right center; }
   .holo-panel:nth-child(even) { transform: rotateY(-18deg); transform-origin: left center; }
 }
-.hub--screen-open .holo-field, .hub--screen-open .hub-identity { opacity: 0.35; filter: blur(2px); }
-.hub-identity { transition: opacity 400ms, filter 400ms; }
+.hub--screen-open .hub-destinations, .hub--screen-open .hub-identity, .hub--screen-open .hub-top { opacity: 0.08; filter: blur(3px); }
+.hub-identity, .hub-top, .hub-destinations { transition: opacity 400ms, filter 400ms; }
 
 /* Open screens: liquid-glass windows in a 3D layer over the lab. */
 .holo-layer { --pad: clamp(0.5rem, 3vw, 2.5rem); --rail: 64px; position: fixed; inset: 0; z-index: 20; perspective: 1500px; pointer-events: none; }
