@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { NodeKind } from '../../../data/eduverse-graph'
+import { buildCables, type CableEdge, type TraceState } from './cables'
 import { createCameraRig } from './camera'
 import { buildEnvironment } from './environment'
 import { createModuleKit } from './modules'
@@ -9,6 +10,7 @@ export type LabNode = { id: string; label: string; kind: NodeKind; pos: [number,
 
 export type LabOptions = {
   nodes: LabNode[]
+  edges: CableEdge[]
   reducedMotion: boolean
   maxPixelRatio?: number
   onSelect: (id: string) => void
@@ -21,6 +23,8 @@ export type Lab = {
   setHighlighted: (id: string | null) => void
   /** Node ids that should glow as part of an active trace. */
   setActiveNodes: (ids: string[]) => void
+  /** Show a trace: the ordered edge ids and the current step (pulse plays on that edge). */
+  setTrace: (trace: TraceState | null) => void
   dispose: () => void
   stats: () => { geometries: number; textures: number; frames: number; quality: string }
 }
@@ -44,7 +48,7 @@ type LabModule = {
  * loop. The loop only runs while something is moving, so an idle scene costs nothing.
  */
 export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
-  const { nodes, reducedMotion } = opts
+  const { nodes, edges, reducedMotion } = opts
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
   const quality = detectQuality()
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, opts.maxPixelRatio ?? 2, maxPixelRatio(quality)))
@@ -58,6 +62,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
   const disposables: { dispose: () => void }[] = []
   const track = <T extends { dispose: () => void }>(o: T): T => (disposables.push(o), o)
   const kit = createModuleKit(track)
+  const cables = buildCables(scene, nodes.map((n) => ({ id: n.id, pos: n.pos })), edges, reducedMotion)
 
   // Labels: a DOM overlay positioned from projected world coordinates (aria-hidden;
   // the accessible equivalent is the module list rendered by React).
@@ -130,6 +135,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
       if (Math.abs(glowGoal - m.glow) > 0.003 || Math.abs(liftGoal - m.lift) > 0.002) moving = true
     }
     if (rig.update(dt)) moving = true
+    if (cables.update(dt)) moving = true
     return moving
   }
 
@@ -218,6 +224,10 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
       active = new Set(ids)
       requestFrame()
     },
+    setTrace(trace) {
+      cables.setTrace(trace)
+      requestFrame()
+    },
     stats: () => ({
       geometries: renderer.info.memory.geometries,
       textures: renderer.info.memory.textures,
@@ -235,6 +245,7 @@ export function createLab(canvas: HTMLCanvasElement, opts: LabOptions): Lab {
       canvas.removeEventListener('webglcontextlost', onContextLost)
       document.removeEventListener('visibilitychange', onVisibility)
       labelLayer.remove()
+      cables.dispose()
       environment.dispose()
       for (const d of disposables) d.dispose()
       renderer.dispose()

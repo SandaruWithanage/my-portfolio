@@ -33,7 +33,7 @@ describe('LabSection without WebGL', () => {
   it('still lets keyboard users select a project and reach its case study', async () => {
     const user = userEvent.setup()
     setup()
-    await user.tab()
+    screen.getByRole('button', { name: /Next.js client/ }).focus()
     expect(screen.getByRole('button', { name: /Next.js client/ })).toHaveFocus()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('button', { name: /Next.js client/ })).toHaveAttribute('aria-pressed', 'true')
@@ -43,5 +43,38 @@ describe('LabSection without WebGL', () => {
     )
     await user.keyboard('{Enter}')
     expect(screen.getByText(/Select a module/)).toBeInTheDocument()
+  })
+})
+
+describe('trace controls', () => {
+  it('steps through a trace with captions and resets', async () => {
+    const user = userEvent.setup()
+    setup()
+    await user.click(screen.getByRole('button', { name: 'Tenant-isolated request' }))
+    expect(screen.getByText(/Step 1 of 2:/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getByText(/Step 2 of 2:/)).toBeInTheDocument()
+    expect(screen.getByText(/Row-Level Security, so only that tenant/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
+    expect(screen.queryByText(/Step 1 of/)).toBeNull()
+  })
+
+  it('clears the trace when a module is selected, and vice versa', async () => {
+    const user = userEvent.setup()
+    setup()
+    await user.click(screen.getByRole('button', { name: 'NestJS API' }))
+    expect(screen.getByRole('button', { name: 'NestJS API' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Public school site' }))
+    expect(screen.getByText(/Step 1 of 2:/)).toBeInTheDocument()
+    expect(screen.getByText(/Select a module/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'NestJS API' }))
+    expect(screen.queryByText(/Step 1 of/)).toBeNull()
+  })
+
+  it('renders the 2D architecture diagram as the fallback with an accessible description', () => {
+    setup()
+    expect(screen.getByRole('img', { name: /EduVerse system architecture/ })).toBeInTheDocument()
   })
 })

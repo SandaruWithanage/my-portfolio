@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { DURATION } from '../../components/motion/motion'
 import { useReveal } from '../../components/motion/useReveal'
+import type { TraceState } from './scene/cables'
 import type { Lab, LabNode } from './scene/createLab'
 
 type Props = {
   nodes: LabNode[]
+  edges: { id: string; from: string; to: string }[]
+  trace: TraceState | null
   selectedId: string | null
   highlightedId: string | null
   activeNodeIds: string[]
@@ -32,6 +35,7 @@ export default function LabCanvas(props: Props) {
         if (cancelled) return
         lab = createLab(canvas, {
           nodes: latest.current.nodes,
+          edges: latest.current.edges,
           reducedMotion: latest.current.reducedMotion,
           maxPixelRatio: window.innerWidth < 640 ? 1.5 : 2,
           onSelect: (id) => latest.current.onSelect(id),
@@ -41,6 +45,7 @@ export default function LabCanvas(props: Props) {
         lab.setSelected(latest.current.selectedId)
         lab.setHighlighted(latest.current.highlightedId)
         lab.setActiveNodes(latest.current.activeNodeIds)
+        lab.setTrace(latest.current.trace)
         labRef.current = lab
       })
       .catch(() => {
@@ -64,6 +69,9 @@ export default function LabCanvas(props: Props) {
   useEffect(() => {
     labRef.current?.setActiveNodes(props.activeNodeIds)
   }, [props.activeNodeIds])
+  useEffect(() => {
+    labRef.current?.setTrace(props.trace)
+  }, [props.trace])
 
   return <canvas ref={canvasRef} className="lab-canvas" aria-hidden="true" />
 }

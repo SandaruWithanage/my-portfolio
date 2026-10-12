@@ -1,9 +1,10 @@
-import { lazy, Suspense, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DURATION } from '../../components/motion/motion'
 import { usePrefersReducedMotion } from '../../components/motion/usePrefersReducedMotion'
 import { useReveal } from '../../components/motion/useReveal'
-import { graphNodes, nodeById } from '../../data/eduverse-graph'
+import { graphEdges, graphNodes, nodeById, traceById, traceNodeIds } from '../../data/eduverse-graph'
+import { TraceControls } from './TraceControls'
 import { LabFallback } from './fallback/LabFallback'
 import { isWebGLAvailable, useInViewOnce } from './support'
 
@@ -11,6 +12,7 @@ const LabCanvas = lazy(() => import('./LabCanvas'))
 
 const labNodes = graphNodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, pos: n.pos }))
 const NO_NODES: string[] = []
+const STEP_MS = 1800
 
 export function LabSection() {
   const [stage, setStage] = useState<HTMLDivElement | null>(null)
@@ -24,7 +26,50 @@ export function LabSection() {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
 
+  const [traceId, setTraceId] = useState<string | null>(null)
+  const [step, setStep] = useState(0)
+  const [playing, setPlaying] = useState(false)
+
   const selected = selectedId ? nodeById(selectedId) : undefined
+  const trace = traceId ? (traceById(traceId) ?? null) : null
+  const traceState = useMemo(
+    () => (trace ? { edgeIds: trace.steps.map((s) => s.edge), step } : null),
+    [trace, step],
+  )
+  const activeNodeIds = useMemo(() => (trace ? traceNodeIds(trace, step) : NO_NODES), [trace, step])
+
+  const resetTrace = useCallback(() => {
+    setTraceId(null)
+    setStep(0)
+    setPlaying(false)
+  }, [])
+  const startTrace = (id: string) => {
+    setSelectedId(null)
+    setTraceId(id)
+    setStep(0)
+    setPlaying(false)
+  }
+  const stepBy = (d: 1 | -1) => {
+    setPlaying(false)
+    setStep((s) => Math.max(0, Math.min((trace?.steps.length ?? 1) - 1, s + d)))
+  }
+  const togglePlay = () => setPlaying(!isPlaying)
+  const toggleNode = (id: string) => {
+    resetTrace()
+    setSelectedId((cur) => (cur === id ? null : id))
+  }
+  const pickNode = (id: string) => {
+    resetTrace()
+    setSelectedId(id)
+  }
+
+  // Auto-play advances one step at a time and is derived off at the end of the trace.
+  const isPlaying = playing && !!trace && step < trace.steps.length - 1
+  useEffect(() => {
+    if (!isPlaying) return
+    const id = setTimeout(() => setStep((s) => s + 1), STEP_MS)
+    return () => clearTimeout(id)
+  }, [isPlaying, step])
   const show3d = webgl && !force2d && !failure
   const fallbackReason = !webgl
     ? 'WebGL is not available in this browser, so the 3D lab is replaced with this 2D view.'
@@ -66,16 +111,18 @@ export function LabSection() {
                 nodes={labNodes}
                 selectedId={selectedId}
                 highlightedId={focusedId ?? hoveredId}
-                activeNodeIds={NO_NODES}
+                edges={graphEdges}
+                trace={traceState}
+                activeNodeIds={activeNodeIds}
                 reducedMotion={reducedMotion}
-                onSelect={setSelectedId}
+                onSelect={pickNode}
                 onHover={setHoveredId}
                 onUnavailable={setFailure}
               />
             </Suspense>
           )
         ) : (
-          <LabFallback reason={fallbackReason} />
+          <LabFallback reason={fallbackReason} selectedId={selectedId} trace={traceState} onSelect={pickNode} />
         )}
         {show3d && hoveredId && (
           <span className="lab-tip" aria-hidden="true">
@@ -84,13 +131,23 @@ export function LabSection() {
         )}
       </div>
 
+      <TraceControls
+        trace={trace}
+        step={step}
+        playing={isPlaying}
+        onStart={startTrace}
+        onStep={stepBy}
+        onPlay={togglePlay}
+        onReset={resetTrace}
+      />
+
       <ul className="lab-select" aria-label="EduVerse system modules">
         {graphNodes.map((n) => (
           <li key={n.id}>
             <button
               type="button"
               aria-pressed={n.id === selectedId}
-              onClick={() => setSelectedId((cur) => (cur === n.id ? null : n.id))}
+              onClick={() => toggleNode(n.id)}
               onFocus={() => setFocusedId(n.id)}
               onBlur={() => setFocusedId(null)}
               onMouseEnter={() => setHoveredId(n.id)}

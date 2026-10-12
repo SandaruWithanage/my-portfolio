@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
-const HOME_POS = new THREE.Vector3(0, 5.2, 12)
-const HOME_TARGET = new THREE.Vector3(0, 1.4, -3)
-const ARRIVAL_POS = new THREE.Vector3(0, 8.5, 22)
+const HOME_POS = new THREE.Vector3(0, 7.2, 12)
+const HOME_TARGET = new THREE.Vector3(0, 0.8, -3.5)
+const ARRIVAL_POS = new THREE.Vector3(0, 10.5, 22)
 
 /**
  * Camera rig: owns camera position/target easing. `update` returns true while moving,

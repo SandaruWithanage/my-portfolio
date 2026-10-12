@@ -84,7 +84,7 @@ export const graphNodes: GraphNode[] = [
       'Multi-tenant school-website CMS on wildcard *.eduverse.site subdomains: draft, preview and publish versioning, sanitized structured content, Sinhala/English support.',
     anchor: 'engineering-decisions',
     pos: [6.5, -1.5],
-    diagram: [380, 220],
+    diagram: [420, 220],
   },
   {
     id: 'infra',
