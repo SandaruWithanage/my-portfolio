@@ -26,7 +26,7 @@ function radialTexture(): THREE.CanvasTexture {
  * Repeated strips and panels are instanced. No post-processing; glow is faked with
  * additive planes (high quality only).
  */
-export function buildEnvironment(scene: THREE.Scene, quality: Quality) {
+export function buildEnvironment(scene: THREE.Scene, quality: Quality, { emblem: withEmblem = true } = {}) {
   const group = new THREE.Group()
   const lights: THREE.Light[] = []
   const disposables: { dispose: () => void }[] = []
@@ -73,7 +73,8 @@ export function buildEnvironment(scene: THREE.Scene, quality: Quality) {
   const emblemEdges = track(new THREE.EdgesGeometry(emblemGeo))
   const emblem = new THREE.LineSegments(emblemEdges, track(new THREE.LineBasicMaterial({ color: CYAN })))
   emblem.position.set(0, 1.3, PEDESTAL_Z)
-  group.add(emblem)
+  // The hub replaces the emblem with its own centerpiece; the Workshop keeps it.
+  if (withEmblem) group.add(emblem)
 
   // Walls and ceiling
   const wallGeo = track(new THREE.PlaneGeometry(70, 10))

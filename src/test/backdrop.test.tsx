@@ -2,7 +2,9 @@ import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { HubBackdrop } from '../features/hub/backdrop/HubBackdrop'
 import { lookAngles, MAX_PITCH, MAX_YAW } from '../features/hub/backdrop/look'
-import { MONITOR_START_MS, monitorOn, monitorsSettleMs } from '../features/hub/backdrop/sequence'
+import { AMBIENT_FRAME_MS, MONITOR_START_MS, monitorOn, monitorsSettleMs, shouldDraw } from '../features/hub/backdrop/sequence'
+import { coreTiers } from '../features/hub/backdrop/core'
+import { graphNodes } from '../data/eduverse-graph'
 
 describe('hub backdrop', () => {
   it('maps the pointer to a small, clamped head turn', () => {
@@ -25,5 +27,21 @@ describe('activation sequence', () => {
     expect(monitorOn(3, monitorsSettleMs(4))).toBe(true)
     // The boot log runs ~0.9s; the desk should be fully lit by then.
     expect(monitorsSettleMs(4)).toBeLessThanOrEqual(900)
+  })
+})
+
+describe('centerpiece', () => {
+  it('places every EduVerse component on exactly one tier, infra at the base', () => {
+    const tiers = coreTiers(graphNodes)
+    const placed = tiers.flatMap((t) => t.ids)
+    expect(placed.sort()).toEqual(graphNodes.map((n) => n.id).sort())
+    expect(tiers[0].ids).toEqual(['infra'])
+    expect(tiers[3].ids).toEqual(['client'])
+  })
+
+  it('caps ambient rendering at 30 fps but never throttles a transition', () => {
+    expect(shouldDraw(false, 10)).toBe(false)
+    expect(shouldDraw(false, AMBIENT_FRAME_MS)).toBe(true)
+    expect(shouldDraw(true, 0)).toBe(true)
   })
 })

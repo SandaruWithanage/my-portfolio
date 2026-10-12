@@ -2,7 +2,10 @@ import * as THREE from 'three'
 import { buildEnvironment } from '../../engineering-lab/scene/environment'
 import { detectQuality, maxPixelRatio } from '../../engineering-lab/scene/quality'
 import { lookAngles } from './look'
-import { monitorOn, monitorsSettleMs } from './sequence'
+import { graphNodes } from '../../../data/eduverse-graph'
+import { PEDESTAL_Z } from '../../engineering-lab/scene/environment'
+import { buildCore } from './core'
+import { monitorOn, monitorsSettleMs, shouldDraw } from './sequence'
 import { buildWorkshop } from './workshop'
 
 export type BackdropOptions = {
@@ -45,8 +48,10 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
   renderer.toneMappingExposure = DORMANT_EXPOSURE
 
   const scene = new THREE.Scene()
-  const environment = buildEnvironment(scene, quality)
+  const environment = buildEnvironment(scene, quality, { emblem: false })
   const workshop = buildWorkshop(scene, renderer, quality)
+  // Centerpiece: EduVerse's architecture on the pedestal (pedestal top is at y 0.3).
+  const core = buildCore(scene, graphNodes, new THREE.Vector3(0, 0.3, PEDESTAL_Z))
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80)
 
   const disposables: { dispose: () => void }[] = []
@@ -114,7 +119,12 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
   let raf = 0
   let last = 0
   let frames = 0
+  let lastDraw = 0
+  let coreTime = 0
   const instant = opts.reducedMotion
+  // The core turns only on the high tier with motion allowed; otherwise it holds a still pose.
+  const spin = quality === 'high' && !instant
+  core.update(0)
 
   const place = () => {
     // Orbit the eye slightly around the target: a head turn, not a fly-through.
@@ -146,16 +156,22 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
       m.screen.opacity = 0.02 + m.level * 0.16
       m.frame.opacity = 0.12 + m.level * 0.5
     })
-    place()
-    renderer.render(scene, camera)
-    frames++
-    const moving =
+    const transitioning =
       Math.abs(yaw.goal - yaw.now) > 1e-4 ||
       Math.abs(pitch.goal - pitch.now) > 1e-4 ||
       Math.abs(exposure.goal - exposure.now) > 1e-3 ||
       monitorsMoving ||
       (online && elapsed < monitorsSettleMs(monitors.length))
-    if (moving) raf = requestAnimationFrame(step)
+    const ambient = spin && online
+    if (ambient) coreTime += dt
+    if (shouldDraw(transitioning, t - lastDraw)) {
+      lastDraw = t
+      core.update(coreTime)
+      place()
+      renderer.render(scene, camera)
+      frames++
+    }
+    if (transitioning || ambient) raf = requestAnimationFrame(step)
     else last = 0
   }
   function requestFrame() {
@@ -218,6 +234,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
       ro.disconnect()
       canvas.removeEventListener('webglcontextlost', onContextLost)
       document.removeEventListener('visibilitychange', onVisibility)
+      core.dispose()
       workshop.dispose()
       environment.dispose()
       for (const d of disposables) d.dispose()
