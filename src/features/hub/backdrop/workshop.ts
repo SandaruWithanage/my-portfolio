@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import type { Quality } from '../../engineering-lab/scene/quality'
 
 const CYAN = 0x36bffa
 const AMBER = 0xf0ad62
@@ -14,10 +13,8 @@ const ENV_INTENSITY = 0.35
  * amber accents near the console, instanced server racks along the back wall and
  * overhead structure. Everything is static: nothing here needs extra frames.
  */
-export function buildWorkshop(scene: THREE.Scene, renderer: THREE.WebGLRenderer, quality: Quality) {
-  const high = quality === 'high'
+export function buildWorkshop(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
   const group = new THREE.Group()
-  const lights: THREE.Light[] = []
   const disposables: { dispose: () => void }[] = []
   const track = <T extends { dispose: () => void }>(o: T): T => (disposables.push(o), o)
 
@@ -99,20 +96,13 @@ export function buildWorkshop(scene: THREE.Scene, renderer: THREE.WebGLRenderer,
     [-4, -12].map((z) => new THREE.Matrix4().makeTranslation(0, 9.1, z)),
   )
 
-  // Restrained amber accents by the console (high tier only, like the hangar's point lights).
-  if (high) {
-    for (const x of [-3.5, 3.5]) {
-      const l = new THREE.PointLight(AMBER, 10, 9, 2)
-      l.position.set(x, 3.2, 7)
-      lights.push(l)
-    }
-  }
+  // Amber work lighting lives in props.ts (both tiers), so none is added here.
 
-  scene.add(group, ...lights)
+  scene.add(group)
 
   return {
     dispose() {
-      scene.remove(group, ...lights)
+      scene.remove(group)
       if (scene.environment === envTarget.texture) scene.environment = null
       for (const d of disposables) d.dispose()
     },

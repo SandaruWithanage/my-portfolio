@@ -60,10 +60,10 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-async function make(reducedMotion = false) {
+async function make(reducedMotion = false, world: 'workshop' | 'city' = 'workshop') {
   const { createBackdrop } = await import('../features/hub/backdrop/createBackdrop')
   const canvas = document.createElement('canvas')
-  return createBackdrop(canvas, { reducedMotion })
+  return createBackdrop(canvas, { reducedMotion, world })
 }
 
 describe('hub render budget', () => {
@@ -103,6 +103,39 @@ describe('hub render budget', () => {
     expect(draws.count - before).toBeLessThanOrEqual(61)
     expect(draws.count - before).toBeGreaterThan(0)
     b.dispose()
+  })
+
+  it('stops drawing entirely when idle on the low tier (static geometry never asks for frames)', async () => {
+    vi.stubGlobal('innerWidth', 500) // detectQuality: narrow screens get the low tier
+    const b = await make()
+    expect(b.stats().quality).toBe('low')
+    b.setOnline(true)
+    tick(400) // the exposure fade-in (~2.7 s) and monitors settle
+    const before = draws.count
+    tick(300)
+    expect(draws.count).toBe(before)
+    b.dispose()
+  })
+
+  it('city: draws nothing while paused, and stops entirely when idle on the low tier', async () => {
+    const b = await make(false, 'city')
+    b.setOnline(true)
+    tick(30)
+    b.setPaused(true)
+    const paused = draws.count
+    tick(200)
+    expect(draws.count).toBe(paused)
+    b.dispose()
+
+    vi.stubGlobal('innerWidth', 500)
+    const low = await make(false, 'city')
+    expect(low.stats().quality).toBe('low')
+    low.setOnline(true)
+    tick(400)
+    const before = draws.count
+    tick(300)
+    expect(draws.count).toBe(before)
+    low.dispose()
   })
 
   it('stops drawing entirely when idle under reduced motion', async () => {

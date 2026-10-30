@@ -28,7 +28,7 @@ afterEach(() => sessionStorage.clear())
 
 describe('hub boot', () => {
   it('starts dormant with identity visible and no destinations yet', () => {
-    renderAt('/')
+    renderAt('/classic')
     expect(screen.getByRole('status')).toHaveTextContent(/Standby/)
     expect(screen.getByRole('heading', { level: 1, name: 'Sandaru Withanage' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Navigate systems' })).toBeNull()
@@ -36,7 +36,7 @@ describe('hub boot', () => {
 
   it('can skip the boot sequence once it has started', async () => {
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Initialize lab' }))
     expect(screen.getByRole('status')).toHaveTextContent(/Initializing/)
     await user.click(screen.getByRole('button', { name: 'Skip' }))
@@ -45,7 +45,7 @@ describe('hub boot', () => {
 
   it('completes the boot on its own and moves focus to the destinations', async () => {
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Initialize lab' }))
     const nav = await screen.findByRole('navigation', { name: 'Navigate systems' }, { timeout: 4000 })
     await waitFor(() => expect(nav).toHaveFocus())
@@ -54,7 +54,7 @@ describe('hub boot', () => {
   it('goes straight online under reduced motion (no boot sequence)', async () => {
     mockReducedMotion(true)
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Initialize lab' }))
     expect(screen.queryByRole('button', { name: 'Skip' })).toBeNull()
     expect(screen.getByRole('status')).toHaveTextContent(/System online/)
@@ -62,12 +62,14 @@ describe('hub boot', () => {
 
   it('does not replay the boot within the same session', async () => {
     const user = userEvent.setup()
-    const router = renderAt('/')
+    const router = renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     await user.click(screen.getByRole('button', { name: /Projects & Systems/ }))
     await user.click(screen.getByRole('link', { name: 'Open as page: Projects & Systems' }))
     expect(router.state.location.pathname).toBe('/projects')
-    await user.click(screen.getByRole('link', { name: /Return to lab/ }))
+    // "Return to lab" now leads to the Lab World home; the classic hub lives at /classic.
+    expect(screen.getByRole('link', { name: /Return to lab/ })).toHaveAttribute('href', '/')
+    await act(() => router.navigate('/classic'))
     expect(screen.getByRole('status')).toHaveTextContent(/System online/)
     expect(screen.queryByRole('button', { name: 'Initialize lab' })).toBeNull()
   })
@@ -83,7 +85,7 @@ describe('hub boot', () => {
     }
     try {
       const user = userEvent.setup()
-      renderAt('/')
+      renderAt('/classic')
       await user.click(screen.getByRole('button', { name: 'Skip intro' }))
       expect(screen.getByRole('navigation', { name: 'Navigate systems' })).toBeInTheDocument()
     } finally {
@@ -96,7 +98,7 @@ describe('hub boot', () => {
 describe('hub destinations', () => {
   it('shows each destination as a screen tile, reachable by keyboard', async () => {
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.tab() // skip link
     await user.tab()
     expect(screen.getByRole('button', { name: 'Initialize lab' })).toHaveFocus()
@@ -110,7 +112,7 @@ describe('hub destinations', () => {
 
   it('contains no unpublished employer work or résumé link', async () => {
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     const text = document.body.textContent ?? ''
     for (const banned of ['Breadcrumbs', 'BeyondHR', 'EZPOS', 'ezClerks', 'Divisarana', 'EV Charger', 'Résumé', 'Resume']) {
@@ -126,10 +128,10 @@ describe('holographic screens', () => {
 
   it('opens a screen in place, keeps its route as a link and updates the URL', async () => {
     const user = userEvent.setup()
-    const router = renderAt('/')
+    const router = renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     await user.click(tile(/Identity & Communications/))
-    expect(router.state.location.pathname).toBe('/')
+    expect(router.state.location.pathname).toBe('/classic')
     expect(router.state.location.search).toBe('?screen=contact')
     expect(region('Identity & Communications')).toBeInTheDocument()
     expect(tile(/Identity & Communications/)).toHaveAttribute('aria-expanded', 'true')
@@ -140,7 +142,7 @@ describe('holographic screens', () => {
 
   it('sends the open screen back when another opens, and brings it forward again', async () => {
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     await user.click(tile(/Skills & Education/))
     await user.click(tile(/Identity & Communications/))
@@ -155,7 +157,7 @@ describe('holographic screens', () => {
   it('closing the front screen returns the one behind it; Esc closes too', async () => {
     mockReducedMotion(true)
     const user = userEvent.setup()
-    const router = renderAt('/')
+    const router = renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     await user.click(tile(/Skills & Education/))
     await user.click(tile(/Identity & Communications/))
@@ -171,7 +173,7 @@ describe('holographic screens', () => {
 
   it('switches screens from the rail while one is open', async () => {
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     await user.click(tile(/Skills & Education/))
     const rail = screen.getByRole('navigation', { name: 'Switch screen' })
@@ -183,7 +185,7 @@ describe('holographic screens', () => {
 
   it('closing updates state at once; the exit animation is an inert copy that then goes away', async () => {
     const user = userEvent.setup()
-    const router = renderAt('/')
+    const router = renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     await user.click(tile(/Skills & Education/))
     await user.click(screen.getByRole('button', { name: 'Close Skills & Education' }))
@@ -196,7 +198,7 @@ describe('holographic screens', () => {
 
   it('reopening a screen mid-exit cancels the exit and keeps it open', async () => {
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     await user.click(tile(/Skills & Education/))
     await user.click(screen.getByRole('button', { name: 'Close Skills & Education' }))
@@ -209,7 +211,7 @@ describe('holographic screens', () => {
 
   it('leaves no inline styles on the identity after its reveal, so it can fade behind screens', async () => {
     const user = userEvent.setup()
-    renderAt('/')
+    renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     const identity = document.querySelector<HTMLElement>('.hub-identity')!
     await waitFor(() => expect(identity.style.opacity).toBe(''), { timeout: 3000 })
@@ -217,20 +219,20 @@ describe('holographic screens', () => {
   })
 
   it('opens a screen directly from its link, skipping the boot', () => {
-    renderAt('/?screen=background')
+    renderAt('/classic?screen=background')
     expect(screen.getByRole('status')).toHaveTextContent(/System online/)
     expect(region('Skills & Education')).toBeInTheDocument()
   })
 
   it('ignores an unknown screen id', () => {
-    renderAt('/?screen=nope')
+    renderAt('/classic?screen=nope')
     expect(screen.getByRole('button', { name: 'Initialize lab' })).toBeInTheDocument()
     for (const d of destinations) expect(region(d.title)).toBeNull()
   })
 
   it('browser Back moves to the previous screen, then closes it', async () => {
     const user = userEvent.setup()
-    const router = renderAt('/')
+    const router = renderAt('/classic')
     await user.click(screen.getByRole('button', { name: 'Skip intro' }))
     await user.click(tile(/Skills & Education/))
     await user.click(tile(/Identity & Communications/))

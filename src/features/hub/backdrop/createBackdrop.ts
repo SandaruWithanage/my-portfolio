@@ -6,10 +6,14 @@ import { graphNodes } from '../../../data/eduverse-graph'
 import { PEDESTAL_Z } from '../../engineering-lab/scene/environment'
 import { buildCore } from './core'
 import { monitorOn, monitorsSettleMs, shouldDraw } from './sequence'
+import { buildCity } from './city'
+import { buildProps } from './props'
 import { buildWorkshop } from './workshop'
 
 export type BackdropOptions = {
   reducedMotion: boolean
+  /** Which environment surrounds the hub: the workshop room (default) or the city. */
+  world?: 'workshop' | 'city'
   /** Optional GLTF/GLB lab model (must be licensed for the site). Loaded lazily on the high tier. */
   modelUrl?: string | null
   onContextLost?: () => void
@@ -51,8 +55,15 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
   renderer.toneMappingExposure = DORMANT_EXPOSURE
 
   const scene = new THREE.Scene()
-  const environment = buildEnvironment(scene, quality, { emblem: false })
-  const workshop = buildWorkshop(scene, renderer, quality)
+  // The world around the centerpiece: the workshop room (default) or the city (`?world=city`).
+  const world: { dispose: () => void }[] = []
+  if (opts.world === 'city') {
+    world.push(buildCity(scene, quality))
+  } else {
+    world.push(buildEnvironment(scene, quality, { emblem: false }), buildWorkshop(scene, renderer))
+    // Built after the hangar: it retunes this scene's own hangar lights (restored on dispose).
+    world.push(buildProps(scene, quality))
+  }
   // Centerpiece: EduVerse's architecture on the pedestal (pedestal top is at y 0.3).
   const core = buildCore(scene, graphNodes, new THREE.Vector3(0, 0.3, PEDESTAL_Z), { particles: quality === 'high' })
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80)
@@ -256,8 +267,8 @@ export function createBackdrop(canvas: HTMLCanvasElement, opts: BackdropOptions)
       canvas.removeEventListener('webglcontextlost', onContextLost)
       document.removeEventListener('visibilitychange', onVisibility)
       core.dispose()
-      workshop.dispose()
-      environment.dispose()
+      // Reverse order: props restores the hangar lights before the hangar is removed.
+      for (const w of [...world].reverse()) w.dispose()
       for (const d of disposables) d.dispose()
       renderer.dispose()
       renderer.forceContextLoss()

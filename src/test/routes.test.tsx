@@ -11,8 +11,29 @@ function renderAt(path: string) {
 }
 
 describe('routing', () => {
-  it('renders the hub at / with the name and no site navigation bar', () => {
+  it('serves the Lab at / — without WebGL it falls back to the full plain portfolio', async () => {
     renderAt('/')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sandaru Withanage' })).toBeInTheDocument()
+    expect(screen.getByText(/can’t show the 3D lab/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Enter the lab' })).toBeNull()
+    for (const p of projects) expect(screen.getAllByRole('link', { name: p.title })[0]).toHaveAttribute('href', `/projects/${p.slug}`)
+    expect(screen.getByRole('link', { name: /sandaruvithanage\.dev@gmail\.com/ })).toHaveAttribute('href', 'mailto:sandaruvithanage.dev@gmail.com')
+  })
+
+  it('keeps /lab as an alias of the Lab', async () => {
+    renderAt('/lab')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sandaru Withanage' })).toBeInTheDocument()
+  })
+
+  it('serves the plain portfolio at /portfolio inside the site layout', () => {
+    renderAt('/portfolio')
+    expect(screen.getByRole('heading', { level: 1, name: 'Sandaru Withanage' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Enter the interactive lab' })).toHaveAttribute('href', '/')
+  })
+
+  it('keeps the previous hub at /classic with the name and no site navigation bar', () => {
+    renderAt('/classic')
     expect(
       screen.getByRole('heading', { level: 1, name: 'Sandaru Withanage' }),
     ).toBeInTheDocument()

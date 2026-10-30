@@ -31,6 +31,10 @@ const LAB_PHOTO_URL = `${import.meta.env.BASE_URL}hub/lab-background.webp`
 
 type Mode = 'probing' | 'photo' | 'scene'
 
+/** `?world=city` selects the city environment; the workshop room stays the default. */
+const WORLD: 'workshop' | 'city' =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('world') === 'city' ? 'city' : 'workshop'
+
 /**
  * The 3D room behind the hub. Decorative and optional: without WebGL, or if the
  * context is lost, nothing renders and the hub's CSS background shows instead.
@@ -67,7 +71,8 @@ export function HubBackdrop({ online, paused, focus, look, reducedMotion }: Prop
         if (cancelled) return
         instance = createBackdrop(canvas, {
           reducedMotion,
-          modelUrl: LAB_MODEL_URL,
+          world: WORLD,
+          modelUrl: WORLD === 'workshop' ? LAB_MODEL_URL : null,
           onContextLost: () => setAvailable(false),
         })
         instance.setOnline(latest.current.online)
